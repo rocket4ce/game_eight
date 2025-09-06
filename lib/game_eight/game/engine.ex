@@ -631,12 +631,9 @@ defmodule GameEight.Game.Engine do
     if length(remaining_cards) < 3 do
       {:error, {:would_break_minimum_cards, combination_name, length(remaining_cards)}}
     else
-      # Check if remaining cards still form a valid combination
-      if Card.valid_trio?(remaining_cards) or Card.valid_sequence?(remaining_cards) do
-        :ok
-      else
-        {:error, {:would_break_valid_combination, combination_name, length(remaining_cards)}}
-      end
+      # Allow taking any card as long as at least 3 cards remain
+      # The remaining cards don't need to form a valid combination
+      :ok
     end
   end
 
@@ -660,11 +657,20 @@ defmodule GameEight.Game.Engine do
 
       combination_cards ->
         card_to_remove_position = get_card_position(card_to_remove)
-        updated_cards = Enum.reject(combination_cards, &(get_card_position(&1) == card_to_remove_position))
-        updated_combinations = Map.put(current_combinations, combination_name, updated_cards)
 
-        GameState.changeset(game_state, %{table_combinations: updated_combinations})
-        |> Repo.update()
+        # Find the index of the first card that matches the position
+        case Enum.find_index(combination_cards, &(get_card_position(&1) == card_to_remove_position)) do
+          nil ->
+            {:error, :card_not_found_in_combination}
+
+          index ->
+            # Remove only the card at that specific index
+            updated_cards = List.delete_at(combination_cards, index)
+            updated_combinations = Map.put(current_combinations, combination_name, updated_cards)
+
+            GameState.changeset(game_state, %{table_combinations: updated_combinations})
+            |> Repo.update()
+        end
     end
   end
 
