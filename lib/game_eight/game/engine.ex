@@ -160,21 +160,34 @@ defmodule GameEight.Game.Engine do
   end
 
   defp create_player_states(game_state, users) do
+    current_time = DateTime.utc_now() |> DateTime.truncate(:second)
+
     player_states =
       users
       |> Enum.with_index()
       |> Enum.map(fn {user, index} ->
-        %PlayerGameState{}
-        |> PlayerGameState.changeset(%{
+        %{
+          id: Ecto.UUID.generate(),
           game_state_id: game_state.id,
           user_id: user.id,
           player_index: index,
-          is_ready: true
-        })
+          is_ready: true,
+          player_status: "player_on",
+          hand_cards: %{},
+          cards_played_total: 0,
+          combinations_made: 0,
+          moves_made_this_turn: 0,
+          inserted_at: current_time,
+          updated_at: current_time
+        }
       end)
 
-    Repo.insert_all(PlayerGameState, player_states)
-    {:ok, player_states}
+    {count, _} = Repo.insert_all(PlayerGameState, player_states)
+    if count == length(users) do
+      {:ok, player_states}
+    else
+      {:error, :failed_to_create_player_states}
+    end
   end
 
   defp get_game_state_with_players(game_state_id) do

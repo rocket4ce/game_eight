@@ -45,9 +45,12 @@ This document captures important patterns, preferences, and project intelligence
 - **Responsive Design:** Implemented mobile-friendly card layouts that work across different screen sizes
 
 **Testing Strategy:**
-- **Comprehensive Coverage:** Achieved 146 passing tests covering all core functionality
+- **Comprehensive Coverage:** Achieved 150 passing tests covering all core functionality including Engine module
 - **Edge Case Testing:** Included tests for invalid card combinations, empty hands, and boundary conditions
 - **Test Organization:** Properly structured tests for each module with clear test descriptions
+- **Test Fixture Usage:** Successfully used AccountsFixtures and GameFixtures for consistent test setup
+- **Ecto insert_all Usage:** Learned proper field mapping for insert_all operations - requires exact schema field names and proper timestamp truncation for :utc_datetime fields
+- **Room State Testing:** Developed strategies for testing game engine with various room states using direct Repo updates when needed
 
 ### Session: Memory Bank Initialization (September 6, 2025)
 
