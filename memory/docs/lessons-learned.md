@@ -29,6 +29,12 @@ This document captures important patterns, preferences, and project intelligence
 - **Error Messaging:** Provide specific, descriptive error messages in the user's language
 - **State Consistency:** Use database transactions to ensure game state remains consistent during complex operations
 
+**Data Structure Consistency (September 6, 2025):**
+- **Card Data Format:** Cards can be stored as both maps with string keys and Elixir structs with atom keys
+- **Helper Functions:** Always use helper functions like `get_card_position/1` instead of direct field access for data compatibility
+- **Pattern Matching:** When working with polymorphic data structures, use helper functions rather than assume specific key formats
+- **Database Storage:** Database JSON fields store maps with string keys, while Elixir structs use atom keys - handle both consistently
+
 **CSS and Styling:**
 - **Mobile-First:** Design touch targets to be at least 48px for mobile usability
 - **Animation Performance:** Use `transform` and `opacity` for smooth animations that don't trigger layout recalculations

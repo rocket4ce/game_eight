@@ -565,7 +565,7 @@ defmodule GameEight.Game.Engine do
   end
 
   defp find_card_at_position_struct(hand_list, position) do
-    case Enum.find(hand_list, &(&1.position == position)) do
+    case Enum.find(hand_list, &(get_card_position(&1) == position)) do
       nil -> {:error, :card_not_found}
       card -> {:ok, card}
     end
@@ -643,7 +643,8 @@ defmodule GameEight.Game.Engine do
         {:error, :combination_not_found}
 
       combination_cards ->
-        updated_cards = Enum.reject(combination_cards, &(&1.position == card_to_remove.position))
+        card_to_remove_position = get_card_position(card_to_remove)
+        updated_cards = Enum.reject(combination_cards, &(get_card_position(&1) == card_to_remove_position))
         updated_combinations = Map.put(current_combinations, combination_name, updated_cards)
 
         GameState.changeset(game_state, %{table_combinations: updated_combinations})

@@ -5,8 +5,8 @@ This file documents errors, issues, and their resolutions encountered during Gam
 
 ## Current Project Status
 **Last Updated:** September 6, 2025
-**Project Phase:** Initial Setup - Memory Bank Initialization
-**Known Issues:** None at this time (project just started)
+**Project Phase:** Game Engine Bug Fixes
+**Recently Fixed Issues:** KeyError in card position access
 
 ## Error Categories
 
@@ -18,17 +18,46 @@ This file documents errors, issues, and their resolutions encountered during Gam
 
 ### 3. Phoenix/LiveView Errors
 
+#### KeyError: Card Position Access Issue (September 6, 2025)
+**Error:** `KeyError) key :position not found in: %{"card" => "9", "deck" => "blue", "position" => 0, "type" => "diamonds"}`
+
+**Context:**
+- Occurred in `GameEight.Game.Engine.remove_card_from_combination/3` at line 646
+- Game engine was processing a "play_combination" event with sequence type
+- Card data was stored with string keys but code was accessing with atom keys
+
+**Root Cause:**
+The code was using direct struct field access (`&1.position`) instead of the existing helper function (`get_card_position/1`) which handles both string and atom key formats for cards.
+
+**Solution:**
+1. Updated `remove_card_from_combination/3` to use `get_card_position/1` helper
+2. Updated `find_card_at_position_struct/2` to use `get_card_position/1` helper
+3. Both functions now handle cards with either string or atom keys correctly
+
+**Files Modified:**
+- `/lib/game_eight/game/engine.ex` (lines 636-651, 567-571)
+
+**Prevention:**
+- Always use the `get_card_position/1` helper when accessing card position fields
+- Consider standardizing card data structure throughout the application
+- Add type specs to enforce card structure consistency
+
+**Impact:**
+- Fixed GenServer crashes during game play
+- Maintains compatibility with both storage formats (string/atom keys)
+- No breaking changes to existing functionality
+
 #### Error: RuntimeError - not implemented on LiveView Streams with Enum.empty?
 - **Date:** September 6, 2025
 - **Context:** Loading the `/rooms` page which displays user's active game rooms
-- **Error Message:** 
+- **Error Message:**
   ```
   ** (RuntimeError) not implemented
       (phoenix_live_view 1.1.11) lib/phoenix_live_view/live_stream.ex:135: Enumerable.Phoenix.LiveView.LiveStream.slice/1
       (elixir 1.18.1) lib/enum.ex:1019: Enum.empty?/1
   ```
 - **Cause:** Used `Enum.empty?(@streams.rooms)` in template - LiveView streams are not enumerable
-- **Solution:** 
+- **Solution:**
   1. Added `:rooms_empty?` assign to track empty state manually
   2. Modified template to use `@rooms_empty?` instead of `Enum.empty?(@streams.rooms)`
   3. Updated stream operations to maintain empty state
@@ -36,10 +65,10 @@ This file documents errors, issues, and their resolutions encountered during Gam
 #### Error: Compilation warnings for unused functions in Hall LiveView
 - **Date:** September 6, 2025
 - **Context:** Compilation warnings appeared for unused private functions in `GameEightWeb.GameLive.Hall`
-- **Error Message:** 
+- **Error Message:**
   ```
   warning: function stream_configure/1 is unused
-  warning: function room_status_text/1 is unused  
+  warning: function room_status_text/1 is unused
   warning: function room_status_badge_class/1 is unused
   warning: function room_players_text/1 is unused
   warning: function load_public_rooms/1 is unused
@@ -48,20 +77,20 @@ This file documents errors, issues, and their resolutions encountered during Gam
 - **Cause:** Hall LiveView template was simplified for debugging but utility functions were left unused
 - **Solution:** Removed all unused private functions since current template only shows debug information
 - **Prevention:** Regularly run `mix compile` to catch unused function warnings early
-- **Files Modified:** 
+- **Files Modified:**
   - `lib/game_eight_web/live/game_live/hall.ex`
 
 #### Error: Protocol.UndefinedError - String.Chars not implemented for Phoenix.LiveView.Socket
 - **Date:** September 6, 2025
 - **Context:** Attempting to fix the stream enumerable error
-- **Error Message:** 
+- **Error Message:**
   ```
   ** (Protocol.UndefinedError) protocol String.Chars not implemented for type Phoenix.LiveView.Socket
   ```
 - **Cause:** Incorrectly called `stream(socket, :rooms, [])` instead of `stream(:rooms, [])`
 - **Solution:** Fixed function call to use correct `stream/3` signature: `stream(:rooms, [])`
 - **Prevention:** Remember LiveView stream function signatures - first arg is the stream name, not socket
-- **Files Modified:** 
+- **Files Modified:**
   - `lib/game_eight_web/live/game_live/room_index.ex`
 
 ### 4. Asset Pipeline Errors
