@@ -375,4 +375,24 @@ defmodule GameEight.Game do
 
     {:ok, deleted_count}
   end
+
+  @doc """
+  Gets a game state by room ID.
+  """
+  def get_game_state_by_room(room_id) do
+    GameState
+    |> where([gs], gs.room_id == ^room_id)
+    |> Repo.one()
+  end
+
+  @doc """
+  Gets a game state with all its associations preloaded.
+  """
+  def get_game_state_with_players(game_state_id) do
+    case Repo.get(GameState, game_state_id)
+         |> Repo.preload([player_game_states: :user]) do
+      nil -> {:error, :game_not_found}
+      game_state -> {:ok, game_state}
+    end
+  end
 end

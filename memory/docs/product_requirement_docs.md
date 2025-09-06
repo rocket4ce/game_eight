@@ -63,7 +63,14 @@
   - Turn limits: 5 moves maximum, 4 cards from hand maximum per turn
   - Real-time card play, table updates, and turn management
 
-### 6.2. Non-Functional Requirements
+### 6.2. Card Visibility and Privacy Rules
+* **Player Hand Cards:** Each player can ONLY see their own hand cards - other players' hands are hidden
+* **Table Cards:** All players can see all cards that have been played on the table (combinations made by any player)
+* **Deck Cards:** Players can see the top card of the discard pile and know the remaining deck count, but cannot see specific cards in the deck
+* **Private Information:** Each player's dice roll results, moves count, and hand size are visible to all players
+* **Game State:** All players can see current turn indicator, game status, and public player statistics
+
+### 6.3. Non-Functional Requirements
 * **Performance:** Page load times under 2 seconds, real-time updates with minimal latency
 * **Scalability:** Support for concurrent users (target: 100+ simultaneous players)
 * **Reliability:** 99%+ uptime, graceful handling of connection issues

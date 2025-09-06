@@ -58,6 +58,7 @@ defmodule GameEightWeb.Router do
       live "/rooms", GameLive.RoomIndex, :index
       live "/rooms/new", GameLive.RoomIndex, :new
       live "/rooms/:id", GameLive.RoomShow, :show
+      live "/game/:room_id", GameLive, :play
     end
 
     post "/users/update-password", UserSessionController, :update_password

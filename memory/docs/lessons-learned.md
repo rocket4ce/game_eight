@@ -8,8 +8,13 @@ This document captures important patterns, preferences, and project intelligence
 ### Development Environment Insights
 *To be updated as development progresses*
 
-### Phoenix Framework Patterns
-*To be documented as LiveView implementation begins*
+**Phoenix LiveView Patterns:**
+- **Card Visibility Implementation:** Successfully designed UI that shows private hand cards to each player while displaying public table cards to everyone
+- **LiveView Structure:** Proper separation of mount/2, handle_params/3, render/1, and handle_event/3 functions for game interface
+- **Route Integration:** Added authenticated routes for game access with proper user authentication checks
+- **Template Organization:** Used helper functions for rendering different game states (dice_rolling, playing, etc.)
+- **Asset Management:** Integrated custom CSS classes for cards with Phoenix component system
+- **PubSub Planning:** Prepared for real-time updates by subscribing to game-specific channels in mount/2
 
 ### Database and Ecto Patterns
 *To be updated during schema development*
