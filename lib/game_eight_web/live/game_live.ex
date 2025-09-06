@@ -22,27 +22,23 @@ defmodule GameEightWeb.GameLive do
       PubSub.subscribe(GameEight.PubSub, "game:#{room_id}")
     end
 
-    # Get current user (assuming we have authentication)
-    current_user = socket.assigns[:current_user]
+    # Get current user from authenticated session
+    current_user = socket.assigns.current_scope.user
 
-    if is_nil(current_user) do
-      {:ok, push_navigate(socket, to: ~p"/users/log-in")}
-    else
-      case load_game_data(room_id, current_user) do
-        {:ok, assigns} ->
-          socket =
-            socket
-            |> assign(assigns)
-            |> assign(:room_id, room_id)
-            |> assign(:current_user, current_user)
-            |> assign(:selected_cards, [])
-            |> assign(:error_message, nil)
+    case load_game_data(room_id, current_user) do
+      {:ok, assigns} ->
+        socket =
+          socket
+          |> assign(assigns)
+          |> assign(:room_id, room_id)
+          |> assign(:current_user, current_user)
+          |> assign(:selected_cards, [])
+          |> assign(:error_message, nil)
 
-          {:ok, socket}
+        {:ok, socket}
 
-        {:error, _reason} ->
-          {:ok, push_navigate(socket, to: ~p"/rooms")}
-      end
+      {:error, _reason} ->
+        {:ok, push_navigate(socket, to: ~p"/rooms")}
     end
   end
 
@@ -54,24 +50,25 @@ defmodule GameEightWeb.GameLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-green-800 text-white">
-      <div class="container mx-auto px-4 py-6">
-        <!-- Game Header -->
-        <div class="mb-6">
-          <div class="flex justify-between items-center">
-            <h1 class="text-3xl font-bold">Juego de Cartas - Mesa <%= @room_id %></h1>
-            <div class="text-lg">
-              <span class="font-semibold">Turno:</span>
-              <%= if @game_state.status == "playing", do: get_current_player_name(@game_state, @players), else: @game_state.status %>
+    <Layouts.app flash={@flash} current_scope={@current_scope}>
+      <div class="min-h-screen bg-green-800 text-white">
+        <div class="container mx-auto px-4 py-6">
+          <!-- Game Header -->
+          <div class="mb-6">
+            <div class="flex justify-between items-center">
+              <h1 class="text-3xl font-bold">Juego de Cartas - Mesa <%= @room_id %></h1>
+              <div class="text-lg">
+                <span class="font-semibold">Turno:</span>
+                <%= if @game_state.status == "playing", do: get_current_player_name(@game_state, @players), else: @game_state.status %>
+              </div>
             </div>
           </div>
-        </div>
 
-        <%= if @error_message do %>
-          <div class="bg-red-600 text-white p-4 rounded mb-4">
-            <%= @error_message %>
-          </div>
-        <% end %>
+          <%= if @error_message do %>
+            <div class="bg-red-600 text-white p-4 rounded mb-4">
+              <%= @error_message %>
+            </div>
+          <% end %>
 
         <!-- Game Status and Controls -->
         <div class="mb-6">
@@ -222,6 +219,7 @@ defmodule GameEightWeb.GameLive do
         </div>
       </div>
     </div>
+    </Layouts.app>
     """
   end
 
