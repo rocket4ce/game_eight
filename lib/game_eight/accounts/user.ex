@@ -11,6 +11,10 @@ defmodule GameEight.Accounts.User do
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
 
+    has_many :created_rooms, GameEight.Game.Room, foreign_key: :creator_id
+    has_many :room_users, GameEight.Game.RoomUser
+    has_many :rooms, through: [:room_users, :room]
+
     timestamps(type: :utc_datetime)
   end
 

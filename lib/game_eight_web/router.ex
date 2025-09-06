@@ -20,7 +20,8 @@ defmodule GameEightWeb.Router do
   scope "/", GameEightWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/test", PageController, :test
+    # get "/", PageController, :home
   end
 
   # Other scopes may use custom stacks.
@@ -54,6 +55,9 @@ defmodule GameEightWeb.Router do
       on_mount: [{GameEightWeb.UserAuth, :require_authenticated}] do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+      live "/rooms", GameLive.RoomIndex, :index
+      live "/rooms/new", GameLive.RoomIndex, :new
+      live "/rooms/:id", GameLive.RoomShow, :show
     end
 
     post "/users/update-password", UserSessionController, :update_password
@@ -64,6 +68,7 @@ defmodule GameEightWeb.Router do
 
     live_session :current_user,
       on_mount: [{GameEightWeb.UserAuth, :mount_current_scope}] do
+      live "/", GameLive.Hall, :index
       live "/users/register", UserLive.Registration, :new
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new
