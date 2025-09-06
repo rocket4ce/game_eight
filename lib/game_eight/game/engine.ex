@@ -97,6 +97,37 @@ defmodule GameEight.Game.Engine do
   end
 
   @doc """
+  Plays cards from both hand and table combinations in a single move.
+
+  This function allows players to take cards from table combinations and combine them
+  with cards from their hand to create new combinations or add to existing ones.
+  """
+  def play_mixed_cards(game_state_id, user_id, hand_cards, table_card_data, combination_type, target_combination \\ nil) do
+    with {:ok, game_state} <- get_game_state_with_players(game_state_id),
+         :ok <- validate_player_turn(game_state, user_id),
+         :ok <- validate_move_limits(game_state),
+         {:ok, player_state} <- find_player_state(game_state, user_id),
+         {:ok, player_hand_cards} <- get_player_hand_cards(player_state),
+         :ok <- validate_cards_in_hand(player_hand_cards, hand_cards),
+         {:ok, table_cards} <- validate_and_extract_table_cards(game_state, table_card_data),
+         all_cards = hand_cards ++ table_cards,
+         :ok <- validate_combination(all_cards, combination_type, game_state, target_combination),
+         {:ok, updated_player} <- remove_cards_from_hand(player_state, hand_cards),
+         {:ok, updated_game} <- remove_cards_from_table_combinations(game_state, table_card_data),
+         {:ok, final_game} <- update_table_combinations(updated_game, all_cards, combination_type, target_combination),
+         {:ok, final_game} <- update_move_counts(final_game),
+         {:ok, final_player} <- maybe_activate_player(updated_player) do
+
+      # Check win condition
+      if PlayerGameState.has_won?(final_player) do
+        finish_game(final_game, user_id)
+      else
+        {:ok, final_game, final_player}
+      end
+    end
+  end
+
+  @doc """
   Draws a card from the deck for the current player.
   """
   def draw_card(game_state_id, user_id) do
@@ -509,7 +540,7 @@ defmodule GameEight.Game.Engine do
   defp reorder_hand_structs(player_state, from_position, to_position) do
     # Convertir a structs Card
     hand_cards = PlayerGameState.hand_to_cards(player_state)
-    
+
     case find_card_at_position_struct(hand_cards, from_position) do
       {:ok, card_to_move} ->
         updated_hand =
@@ -537,7 +568,7 @@ defmodule GameEight.Game.Engine do
 
   defp update_player_hand_from_structs(player_state, card_structs) do
     hand_data = PlayerGameState.cards_to_hand(card_structs)
-    
+
     player_state
     |> PlayerGameState.hand_changeset(%{hand_cards: hand_data})
     |> Repo.update()
@@ -607,6 +638,40 @@ defmodule GameEight.Game.Engine do
         GameState.changeset(game_state, %{table_combinations: updated_combinations})
         |> Repo.update()
     end
+  end
+
+  # Helper functions for mixed card playing
+  defp validate_and_extract_table_cards(game_state, table_card_data) do
+    results =
+      Enum.map(table_card_data, fn {combination_name, card} ->
+        # Validate that we can take this card from the combination
+        case get_combination_cards(game_state, combination_name) do
+          {:ok, combination_cards} ->
+            case validate_can_take_card(combination_cards, card, combination_name) do
+              :ok -> {:ok, card}
+              error -> error
+            end
+          error -> error
+        end
+      end)
+
+    # Check if all validations passed
+    case Enum.find(results, fn result -> match?({:error, _}, result) end) do
+      nil ->
+        table_cards = Enum.map(results, fn {:ok, card} -> card end)
+        {:ok, table_cards}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp remove_cards_from_table_combinations(game_state, table_card_data) do
+    # Remove each card from its respective table combination
+    Enum.reduce_while(table_card_data, {:ok, game_state}, fn {combination_name, card}, {:ok, current_game_state} ->
+      case remove_card_from_combination(current_game_state, combination_name, card) do
+        {:ok, updated_game_state} -> {:cont, {:ok, updated_game_state}}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
   end
 
   defp validate_game_playing(game_state) do

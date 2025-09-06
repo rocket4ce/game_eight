@@ -156,6 +156,24 @@
   @apply transform -translate-y-2;
 }
 
+/* Hand card selection with green highlight */
+.game-card.hand-selected {
+  @apply ring-2 ring-green-500 border-green-500 bg-green-100;
+  @apply transform -translate-y-2 shadow-lg;
+}
+
+/* Table card selection with orange highlight */
+.game-card.table-selected {
+  @apply ring-2 ring-orange-500 border-orange-500 bg-orange-100;
+  @apply transform -translate-y-1 scale-105 shadow-lg;
+}
+
+/* Table card selection (legacy - keeping for compatibility) */
+.table-combinations .game-card.selected {
+  @apply ring-2 ring-yellow-500 border-yellow-500 bg-yellow-100;
+  @apply transform -translate-y-1 scale-105;
+}
+
 .game-card.dragging {
   @apply opacity-75 transform rotate-3 scale-105;
   @apply z-50 shadow-2xl;

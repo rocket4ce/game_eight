@@ -4,6 +4,35 @@ This is a web application written using the Phoenix web framework.
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
+
+## Tidewave MCP Tools
+
+ALWAYS use the following Tidewave MCP tools instead of the Phoenix server or other tools:
+
+### Elixir Project Analysis Tools:
+- `mcp_orvix-mcp_execute_sql_query` - Execute SQL queries against the Ecto repository
+- `mcp_orvix-mcp_get_docs` - Get documentation for modules and functions
+- `mcp_orvix-mcp_get_ecto_schemas` - List all Ecto schema modules and their file paths
+- `mcp_orvix-mcp_get_logs` - Get log output, excluding logs from other tool calls
+- `mcp_orvix-mcp_get_package_location` - Get the location of dependency packages
+- `mcp_orvix-mcp_get_source_location` - Get source location for modules and functions
+- `mcp_orvix-mcp_project_eval` - Evaluate Elixir code in the context of the project
+- `mcp_orvix-mcp_search_package_docs` - Search Hex documentation for project dependencies
+
+### Database Tools:
+- `pgsql_bulk_load_csv` - Bulk-load CSV files into PostgreSQL tables
+- `pgsql_connect` - Connect to PostgreSQL database servers
+- `pgsql_db_context` - Get database schema context and CREATE scripts
+- `pgsql_describe_csv` - Describe CSV file structure using Frictionless
+- `pgsql_disconnect` - Disconnect from PostgreSQL database servers
+- `pgsql_list_databases` - List all databases on PostgreSQL server
+- `pgsql_list_servers` - List all registered PostgreSQL servers
+- `pgsql_modify` - Execute DDL and DML statements to modify database
+- `pgsql_open_script` - Open SQL scripts in editor for review
+- `pgsql_query` - Execute read-only SQL queries
+- `pgsql_visualize_schema` - Open interactive database schema visualization
+
+**NEVER use the Phoenix server (`mix phx.server`) or terminal commands for database operations. Always use the appropriate MCP tools listed above.**
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content

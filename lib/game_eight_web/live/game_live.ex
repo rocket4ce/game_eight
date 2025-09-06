@@ -33,6 +33,7 @@ defmodule GameEightWeb.GameLive do
           |> assign(:room_id, room_id)
           |> assign(:current_user, current_user)
           |> assign(:selected_cards, [])
+          |> assign(:selected_table_cards, [])
           |> assign(:error_message, nil)
 
         {:ok, socket}
@@ -132,15 +133,15 @@ defmodule GameEightWeb.GameLive do
                           </span>
                         <% end %>
                       </div>
-                      <%= if @is_current_player and @game_state.status == "playing" and length(@selected_cards) > 0 do %>
+                      <%= if @is_current_player and @game_state.status == "playing" and total_selected_cards(assigns) > 0 do %>
                         <button
                           phx-click="play_combination"
                           phx-value-type="add_to_combination"
                           phx-value-target={combination_name}
-                          disabled={length(@selected_cards) == 0}
+                          disabled={total_selected_cards(assigns) == 0}
                           class="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 px-2 py-1 text-xs rounded"
                         >
-                          + Agregar (<%= length(@selected_cards) %>)
+                          + Agregar (<%= total_selected_cards(assigns) %>)
                         </button>
                       <% end %>
                     </div>
@@ -148,7 +149,17 @@ defmodule GameEightWeb.GameLive do
                       <%= for {card, index} <- Enum.with_index(cards) do %>
                         <div
                           id={"table-card-#{combination_name}-#{index}"}
-                          class={["game-card", "deck-#{card.deck}", card_type_class(card.type)]}
+                          phx-click={if @is_current_player and @game_state.status == "playing" and length(cards) > 3, do: "toggle_table_card_selection"}
+                          phx-value-combination={combination_name}
+                          phx-value-position={card.position}
+                          phx-value-card-id={"#{combination_name}-#{card.position}"}
+                          class={[
+                            "game-card cursor-pointer select-none relative",
+                            "deck-#{card.deck}",
+                            card_type_class(card.type),
+                            if("#{combination_name}-#{card.position}" in @selected_table_cards, do: "selected table-selected", else: ""),
+                            if(length(cards) <= 3, do: "opacity-50 cursor-not-allowed", else: "")
+                          ]}
                           phx-hook="CardDragSource"
                           data-position={card.position}
                           data-source="table"
@@ -156,6 +167,11 @@ defmodule GameEightWeb.GameLive do
                           data-card-value={card.card}
                           data-card-type={card.type}
                         >
+                          <%= if "#{combination_name}-#{card.position}" in @selected_table_cards do %>
+                            <div class="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
+                              <span class="text-white text-xs">📋</span>
+                            </div>
+                          <% end %>
                           <span class="card-value"><%= card.card %></span>
                           <span class="card-suit"><%= card_symbol(card.type) %></span>
                         </div>
@@ -204,12 +220,17 @@ defmodule GameEightWeb.GameLive do
                     data-card-value={card.card}
                     data-card-type={card.type}
                     class={[
-                      "game-card cursor-pointer select-none",
+                      "game-card cursor-pointer select-none relative",
                       "deck-#{card.deck}",
                       card_type_class(card.type),
-                      if(card.position in @selected_cards, do: "selected", else: "")
+                      if(card.position in @selected_cards, do: "selected hand-selected", else: "")
                     ]}
                   >
+                    <%= if card.position in @selected_cards do %>
+                      <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                        <span class="text-white text-xs">✓</span>
+                      </div>
+                    <% end %>
                     <span class="card-value"><%= card.card %></span>
                     <span class="card-suit"><%= card_symbol(card.type) %></span>
                   </div>
@@ -236,36 +257,103 @@ defmodule GameEightWeb.GameLive do
               <button
                 phx-click="play_combination"
                 phx-value-type="trio"
-                disabled={length(@selected_cards) < 3}
-                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-2 rounded"
+                disabled={total_selected_cards(assigns) < 3}
+                class={[
+                  "px-4 py-2 rounded transition-colors",
+                  if(total_selected_cards(assigns) >= 3,
+                     do: "bg-blue-600 hover:bg-blue-700 text-white",
+                     else: "bg-gray-600 text-gray-400 cursor-not-allowed")
+                ]}
               >
-                Jugar Trío (<%= length(@selected_cards) %> seleccionadas)
+                🃏 Jugar Trío (<%= total_selected_cards(assigns) %> cartas)
+                <%= if length(@selected_table_cards) > 0 do %>
+                  <span class="text-yellow-300">*</span>
+                <% end %>
               </button>
 
               <button
                 phx-click="play_combination"
                 phx-value-type="sequence"
-                disabled={length(@selected_cards) < 3}
-                class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 px-4 py-2 rounded"
+                disabled={total_selected_cards(assigns) < 3}
+                class={[
+                  "px-4 py-2 rounded transition-colors",
+                  if(total_selected_cards(assigns) >= 3,
+                     do: "bg-purple-600 hover:bg-purple-700 text-white",
+                     else: "bg-gray-600 text-gray-400 cursor-not-allowed")
+                ]}
               >
-                Jugar Escalera (<%= length(@selected_cards) %> seleccionadas)
+                📊 Jugar Escalera (<%= total_selected_cards(assigns) %> cartas)
+                <%= if length(@selected_table_cards) > 0 do %>
+                  <span class="text-yellow-300">*</span>
+                <% end %>
               </button>
 
               <button
                 phx-click="draw_card"
-                class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
+                class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white transition-colors"
               >
-                Robar Carta
+                🃟 Robar Carta
               </button>
 
               <button
                 phx-click="pass_turn"
-                class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded"
+                class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded text-white transition-colors"
               >
-                Pasar Turno
+                ⏭️ Pasar Turno
               </button>
             </div>
+
+            <!-- Leyenda para cartas mixtas -->
+            <%= if length(@selected_table_cards) > 0 do %>
+              <div class="mt-2 text-xs text-yellow-300">
+                <span class="text-yellow-300">*</span> Incluye cartas de la mesa - Combinación mixta
+              </div>
+            <% end %>
           </div>
+
+          <!-- Instrucciones para Combinaciones Mixtas -->
+          <%= if @is_current_player and @game_state.status == "playing" do %>
+            <div class="mt-4 bg-blue-900 p-3 rounded-lg border border-blue-700">
+              <h5 class="text-sm font-semibold mb-2 text-blue-200">💡 Instrucciones de Juego</h5>
+              <div class="text-xs text-blue-300 space-y-1">
+                <p><strong>Combinaciones Mixtas:</strong> Puedes combinar cartas de tu mano con cartas de las combinaciones de la mesa.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                  <div>
+                    <p class="text-blue-200 font-medium">🖱️ Cómo seleccionar:</p>
+                    <ul class="list-disc list-inside ml-2 space-y-0.5">
+                      <li>Haz clic en cartas de tu mano</li>
+                      <li>Haz clic en cartas de combinaciones con 4+ cartas</li>
+                      <li>Las cartas seleccionadas se marcan con borde</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p class="text-blue-200 font-medium">🎯 Acciones disponibles:</p>
+                    <ul class="list-disc list-inside ml-2 space-y-0.5">
+                      <li><strong>Trío:</strong> 3+ cartas del mismo valor</li>
+                      <li><strong>Escalera:</strong> 3+ cartas consecutivas (mismo palo)</li>
+                      <li><strong>Agregar:</strong> A combinación existente</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="mt-2 p-2 bg-blue-800 rounded">
+                  <p class="text-yellow-300 font-medium">
+                    📊 Cartas seleccionadas: <span class="font-bold"><%= total_selected_cards(assigns) %></span>
+                    (<span class="text-green-300"><%= length(@selected_cards) %> de la mano</span> +
+                     <span class="text-orange-300"><%= length(@selected_table_cards) %> de la mesa</span>)
+                  </p>
+
+                  <%= if length(@selected_cards) > 0 and length(@selected_table_cards) > 0 do %>
+                    <p class="text-yellow-200 text-xs mt-1">
+                      ⚡ ¡Combinación mixta activa! Las cartas de la mesa se añadirán a tu combinación.
+                    </p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
         <% end %>
 
         <!-- Deck and Discard Pile -->
@@ -350,6 +438,33 @@ defmodule GameEightWeb.GameLive do
     {:noreply, assign(socket, :selected_cards, updated_selection)}
   end
 
+  def handle_event("toggle_table_card_selection", %{"combination" => combination_name, "position" => _position, "card-id" => card_id}, socket) do
+    # Only allow current player to select table cards during their turn
+    unless socket.assigns.is_current_player and socket.assigns.game_state.status == "playing" do
+      {:noreply, socket}
+    else
+      selected_table_cards = socket.assigns.selected_table_cards
+
+      # Validate that taking this card would still leave at least 3 cards in the combination
+      table_combinations = socket.assigns.game_state.table_combinations
+      combination_cards = Map.get(table_combinations, combination_name, [])
+
+      if length(combination_cards) <= 3 do
+        # Can't select cards from combinations with only 3 cards
+        {:noreply, put_flash(socket, :error, "No puedes tomar cartas de una combinación con solo 3 cartas.")}
+      else
+        updated_selection =
+          if card_id in selected_table_cards do
+            List.delete(selected_table_cards, card_id)
+          else
+            [card_id | selected_table_cards]
+          end
+
+        {:noreply, assign(socket, :selected_table_cards, updated_selection)}
+      end
+    end
+  end
+
   def handle_event("roll_dice", _params, socket) do
     game_state = socket.assigns.game_state
     user_id = socket.assigns.current_user.id
@@ -377,28 +492,61 @@ defmodule GameEightWeb.GameLive do
   def handle_event("play_combination", %{"type" => combination_type} = params, socket) do
     game_state = socket.assigns.game_state
     user_id = socket.assigns.current_user.id
-    selected_positions = socket.assigns.selected_cards
+    selected_hand_positions = socket.assigns.selected_cards
+    selected_table_cards = socket.assigns.selected_table_cards
 
     # Get the selected cards from player's hand
     hand_cards = socket.assigns.current_player_hand
-    selected_cards = Enum.filter(hand_cards, fn card ->
-      card.position in selected_positions
+    selected_hand_cards = Enum.filter(hand_cards, fn card ->
+      card.position in selected_hand_positions
     end)
+
+    # Get the selected cards from table combinations
+    selected_table_card_data =
+      selected_table_cards
+      |> Enum.map(fn card_id ->
+        [combination_name, position_str] = String.split(card_id, "-", parts: 2)
+        position = String.to_integer(position_str)
+
+        # Find the card in the table combination
+        table_combinations = socket.assigns.game_state.table_combinations
+        combination_cards = Map.get(table_combinations, combination_name, [])
+
+        card = Enum.find(combination_cards, fn card -> card.position == position end)
+
+        if card do
+          {combination_name, card}
+        else
+          nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
 
     # Get target combination if it's an "add_to_combination" action
     target_combination = Map.get(params, "target")
 
-    case GameEight.Game.Engine.play_cards(game_state.id, user_id, selected_cards, combination_type, target_combination) do
+    # Use mixed card play if we have table cards, otherwise use regular play
+    result = if selected_table_card_data == [] do
+      # Regular play with only hand cards
+      GameEight.Game.Engine.play_cards(game_state.id, user_id, selected_hand_cards, combination_type, target_combination)
+    else
+      # Mixed play with both hand and table cards
+      GameEight.Game.Engine.play_mixed_cards(game_state.id, user_id, selected_hand_cards, selected_table_card_data, combination_type, target_combination)
+    end
+
+    case result do
       {:ok, updated_game_state, _updated_player} ->
         updated_socket =
           socket
           |> update_game_state(updated_game_state)
           |> assign(:selected_cards, [])
+          |> assign(:selected_table_cards, [])
           |> assign(:error_message, nil)
 
         # Broadcast to other players
+        all_selected_cards = selected_hand_cards ++ Enum.map(selected_table_card_data, fn {_, card} -> card end)
         PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
-          {:cards_played, %{user_id: user_id, cards: selected_cards, type: combination_type}})
+          {:cards_played, %{user_id: user_id, cards: all_selected_cards, type: combination_type}})
 
         {:noreply, updated_socket}
 
@@ -441,6 +589,7 @@ defmodule GameEightWeb.GameLive do
           socket
           |> update_game_state(updated_game_state)
           |> assign(:selected_cards, [])
+          |> assign(:selected_table_cards, [])
           |> assign(:error_message, nil)
 
         # Broadcast to other players
@@ -596,18 +745,19 @@ defmodule GameEightWeb.GameLive do
   end
 
   defp get_players_data(game_state) do
-    try do
-      players =
-        game_state
-        |> Repo.preload([player_game_states: :user])
-        |> Map.get(:player_game_states, [])
-        |> Enum.map(fn player_state ->
-          {player_state, player_state.user}
-        end)
+    case game_state do
+      %GameEight.Game.GameState{} ->
+        players =
+          game_state
+          |> Repo.preload([player_game_states: :user])
+          |> Map.get(:player_game_states, [])
+          |> Enum.map(fn player_state ->
+            {player_state, player_state.user}
+          end)
 
-      {:ok, players}
-    rescue
-      _error -> {:error, :players_not_loaded}
+        {:ok, players}
+      _ ->
+        {:error, :invalid_game_state}
     end
   end
 
@@ -695,6 +845,10 @@ defmodule GameEightWeb.GameLive do
       :no_moves_left -> "No tienes movimientos restantes"
       :combination_not_found -> "Combinación no encontrada en la mesa"
       :card_not_found_in_combination -> "Carta no encontrada en la combinación"
+      :invalid_trio -> "Las cartas seleccionadas no forman un trío válido (mismo valor)"
+      :invalid_sequence -> "Las cartas seleccionadas no forman una escalera válida (mismo palo, consecutivas)"
+      :invalid_addition -> "No puedes agregar estas cartas a la combinación seleccionada"
+      :cards_not_in_hand -> "Algunas cartas seleccionadas no están en tu mano"
       {:would_break_minimum_cards, combination_name, remaining} ->
         "No puedes tomar esa carta: la combinación '#{combination_name}' quedaría con #{remaining} cartas (mínimo 3)"
       {:would_break_valid_combination, combination_name, remaining} ->
@@ -703,5 +857,10 @@ defmodule GameEightWeb.GameLive do
       :card_not_found -> "Carta no encontrada"
       _ -> "Error desconocido: #{inspect(reason)}"
     end
+  end
+
+  # Helper function to get total selected cards count
+  defp total_selected_cards(assigns) do
+    length(assigns.selected_cards) + length(assigns.selected_table_cards)
   end
 end
