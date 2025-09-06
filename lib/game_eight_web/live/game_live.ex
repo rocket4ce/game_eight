@@ -104,17 +104,17 @@ defmodule GameEightWeb.GameLive do
         <div class="mb-6">
           <h3 class="text-xl font-semibold mb-3">Cartas en la Mesa</h3>
           <div class="bg-green-700 p-4 rounded-lg min-h-[200px]">
-            <%= if @table_combinations == [] do %>
+            <%= if @table_combinations == %{} do %>
               <div class="text-center text-gray-300 py-8">
                 No hay combinaciones en la mesa aún
               </div>
             <% else %>
               <div class="grid gap-4">
-                <%= for {combination, index} <- Enum.with_index(@table_combinations) do %>
+                <%= for {{combination_name, cards}, index} <- Enum.with_index(@table_combinations) do %>
                   <div class="bg-green-600 p-3 rounded">
-                    <div class="text-sm mb-2">Combinación <%= index + 1 %></div>
+                    <div class="text-sm mb-2">Combinación <%= index + 1 %> (<%= combination_name %>)</div>
                     <div class="flex flex-wrap gap-1">
-                      <%= for card <- combination.cards do %>
+                      <%= for card <- cards do %>
                         <div class={["game-card", "deck-#{card.deck}", card_type_class(card.type)]}>
                           <span class="card-value"><%= card.card %></span>
                           <span class="card-suit"><%= card_symbol(card.type) %></span>
