@@ -77,14 +77,14 @@ defmodule GameEight.Game.Engine do
   def play_cards(game_state_id, user_id, cards_to_play, combination_type, target_combination \\ nil) do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          :ok <- validate_player_turn(game_state, user_id),
-         :ok <- validate_move_limits(game_state),
+         :ok <- validate_move_limits_with_cards(game_state, length(cards_to_play)),
          {:ok, player_state} <- find_player_state(game_state, user_id),
          {:ok, hand_cards} <- get_player_hand_cards(player_state),
          :ok <- validate_cards_in_hand(hand_cards, cards_to_play),
          :ok <- validate_combination(cards_to_play, combination_type, game_state, target_combination),
          {:ok, updated_player} <- remove_cards_from_hand(player_state, cards_to_play),
          {:ok, updated_game} <- update_table_combinations(game_state, cards_to_play, combination_type, target_combination),
-         {:ok, final_game} <- update_move_counts(updated_game),
+         {:ok, final_game} <- update_move_counts_with_cards(updated_game, length(cards_to_play)),
          {:ok, final_player} <- maybe_activate_player(updated_player) do
 
       # Check win condition
@@ -105,7 +105,7 @@ defmodule GameEight.Game.Engine do
   def play_mixed_cards(game_state_id, user_id, hand_cards, table_card_data, combination_type, target_combination \\ nil) do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          :ok <- validate_player_turn(game_state, user_id),
-         :ok <- validate_move_limits(game_state),
+         :ok <- validate_move_limits_for_mixed_play(game_state, length(hand_cards)),
          {:ok, player_state} <- find_player_state(game_state, user_id),
          {:ok, player_hand_cards} <- get_player_hand_cards(player_state),
          :ok <- validate_cards_in_hand(player_hand_cards, hand_cards),
@@ -115,7 +115,7 @@ defmodule GameEight.Game.Engine do
          {:ok, updated_player} <- remove_cards_from_hand(player_state, hand_cards),
          {:ok, updated_game} <- remove_cards_from_table_combinations(game_state, table_card_data),
          {:ok, final_game} <- update_table_combinations(updated_game, all_cards, combination_type, target_combination),
-         {:ok, final_game} <- update_move_counts(final_game),
+         {:ok, final_game} <- update_move_counts_for_mixed_play(final_game, length(hand_cards)),
          {:ok, final_player} <- maybe_activate_player(updated_player) do
 
       # Check win condition
@@ -327,10 +327,14 @@ defmodule GameEight.Game.Engine do
     end
   end
 
-  defp validate_move_limits(game_state) do
+  defp validate_move_limits_for_mixed_play(game_state, hand_cards_count) do
+    validate_move_limits_with_cards(game_state, hand_cards_count)
+  end
+
+  defp validate_move_limits_with_cards(game_state, cards_count) do
     cond do
       game_state.moves_left <= 0 -> {:error, :no_moves_left}
-      game_state.cards_played_this_turn >= 4 -> {:error, :too_many_cards_played}
+      game_state.cards_played_this_turn + cards_count > 4 -> {:error, :too_many_cards_played}
       true -> :ok
     end
   end
@@ -434,7 +438,13 @@ defmodule GameEight.Game.Engine do
     existing_keys = Map.keys(combinations)
     new_key = generate_combination_key(type, existing_keys)
 
-    card_maps = Enum.map(cards, &Map.from_struct/1)
+    # Apply automatic reordering for any valid sequence
+    processed_cards = case type do
+      "sequence" -> Card.reorder_sequence(cards)
+      _ -> cards
+    end
+
+    card_maps = Enum.map(processed_cards, &Map.from_struct/1)
     Map.put(combinations, new_key, card_maps)
   end
 
@@ -442,9 +452,16 @@ defmodule GameEight.Game.Engine do
     case Map.get(combinations, target_key) do
       nil -> combinations  # Target combination doesn't exist
       existing_cards ->
-        card_maps = Enum.map(cards, &Map.from_struct/1)
-        updated_cards = existing_cards ++ card_maps
-        Map.put(combinations, target_key, updated_cards)
+        # Convert existing cards back to structs to check if it's a sequence
+        existing_structs = Enum.map(existing_cards, &map_to_card/1)
+        new_cards_structs = cards
+        all_cards = existing_structs ++ new_cards_structs
+
+        # Apply reordering for any valid sequence (not just complete ones)
+        processed_cards = Card.reorder_sequence(all_cards)
+
+        card_maps = Enum.map(processed_cards, &Map.from_struct/1)
+        Map.put(combinations, target_key, card_maps)
     end
   end
 
@@ -454,10 +471,14 @@ defmodule GameEight.Game.Engine do
     "#{type}_#{index}"
   end
 
-  defp update_move_counts(game_state) do
+  defp update_move_counts_for_mixed_play(game_state, hand_cards_count) do
+    update_move_counts_with_cards(game_state, hand_cards_count)
+  end
+
+  defp update_move_counts_with_cards(game_state, cards_count) do
     GameState.turn_changeset(game_state, %{
       moves_left: game_state.moves_left - 1,
-      cards_played_this_turn: game_state.cards_played_this_turn + 1
+      cards_played_this_turn: game_state.cards_played_this_turn + cards_count
     })
     |> Repo.update()
   end
@@ -576,11 +597,6 @@ defmodule GameEight.Game.Engine do
 
     player_state
     |> PlayerGameState.hand_changeset(%{hand_cards: hand_data})
-    |> Repo.update()
-  end
-
-  defp update_player_hand(player_state, new_hand) do
-    PlayerGameState.changeset(player_state, %{hand_cards: new_hand})
     |> Repo.update()
   end
 

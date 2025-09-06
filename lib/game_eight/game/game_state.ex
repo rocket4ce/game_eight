@@ -145,11 +145,23 @@ defmodule GameEight.Game.GameState do
 
   @doc """
   Gets table combinations as Card structs.
+  Automatically reorders sequences for proper display.
   """
   def table_combinations_to_cards(%__MODULE__{table_combinations: combinations}) do
+    alias GameEight.Game.Card
+
     combinations
     |> Enum.map(fn {key, cards} ->
-      {key, Enum.map(cards, &map_to_card/1)}
+      card_structs = Enum.map(cards, &map_to_card/1)
+
+      # Apply automatic reordering for sequences when loading from database
+      reordered_cards = if String.starts_with?(key, "sequence") do
+        Card.reorder_sequence(card_structs)
+      else
+        card_structs
+      end
+
+      {key, reordered_cards}
     end)
     |> Enum.into(%{})
   end

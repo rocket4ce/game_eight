@@ -157,23 +157,23 @@ defmodule GameEightWeb.GameLive do
                           id={"table-card-#{combination_name}-#{index}"}
                           phx-click={if @is_current_player and @game_state.status == "playing" and length(cards) > 3, do: "toggle_table_card_selection"}
                           phx-value-combination={combination_name}
-                          phx-value-position={card.position}
-                          phx-value-card-id={"#{combination_name}-#{card.position}"}
+                          phx-value-position={index}
+                          phx-value-card-id={"#{combination_name}-#{index}"}
                           class={[
                             "game-card cursor-pointer select-none relative",
                             "deck-" <> to_string(card.deck),
                             card_type_class(card.type),
-                            if("#{combination_name}-#{card.position}" in @selected_table_cards, do: "selected table-selected", else: ""),
+                            if("#{combination_name}-#{index}" in @selected_table_cards, do: "selected table-selected", else: ""),
                             if(length(cards) <= 3, do: "opacity-50 cursor-not-allowed", else: "")
                           ]}
                           phx-hook="CardDragSource"
-                          data-position={card.position}
+                          data-position={index}
                           data-source="table"
                           data-combination-name={combination_name}
                           data-card-value={card.card}
                           data-card-type={card.type}
                         >
-                          <%= if "#{combination_name}-#{card.position}" in @selected_table_cards do %>
+                          <%= if "#{combination_name}-#{index}" in @selected_table_cards do %>
                             <div class="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
                               <span class="text-white text-xs">📋</span>
                             </div>
@@ -511,14 +511,14 @@ defmodule GameEightWeb.GameLive do
     selected_table_card_data =
       selected_table_cards
       |> Enum.map(fn card_id ->
-        [combination_name, position_str] = String.split(card_id, "-", parts: 2)
-        position = String.to_integer(position_str)
+        [combination_name, index_str] = String.split(card_id, "-", parts: 2)
+        index = String.to_integer(index_str)
 
-        # Find the card in the table combination
+        # Find the card in the table combination by index
         table_combinations = socket.assigns.table_combinations
         combination_cards = Map.get(table_combinations, combination_name, [])
 
-        card = Enum.find(combination_cards, fn card -> card.position == position end)
+        card = Enum.at(combination_cards, index)
 
         if card do
           {combination_name, card}
@@ -890,6 +890,7 @@ defmodule GameEightWeb.GameLive do
       :insufficient_cards -> "Necesitas seleccionar más cartas"
       :invalid_combination -> "Combinación inválida"
       :no_moves_left -> "No tienes movimientos restantes"
+      :too_many_cards_played -> "Has alcanzado el límite de 4 cartas por turno. Termina tu turno o roba una carta"
       :combination_not_found -> "Combinación no encontrada en la mesa"
       :card_not_found_in_combination -> "Carta no encontrada en la combinación"
       :invalid_trio -> "Las cartas seleccionadas no forman un trío válido (mismo valor)"

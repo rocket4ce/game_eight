@@ -173,6 +173,80 @@ defmodule GameEight.Game.Card do
   end
 
   @doc """
+  Reorders cards in a complete sequence (13 cards A-K) to natural order.
+  Only applies when the sequence contains exactly 13 cards and all values from A to K.
+
+  ## Examples
+
+      iex> cards = [%Card{card: "Jack"}, %Card{card: "Queen"}, %Card{card: "King"},
+      ...>          %Card{card: "Ace"}, %Card{card: "2"}, %Card{card: "3"}]
+      iex> GameEight.Game.Card.reorder_complete_sequence(cards)
+      # Returns cards reordered as: A, 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K (if complete)
+  """
+  def reorder_complete_sequence(cards) when is_list(cards) do
+    if is_complete_sequence?(cards) do
+      # Reorder to natural sequence: A, 2, 3, 4, 5, 6, 7, 8, 9, 10, J, Q, K
+      cards
+      |> Enum.sort_by(&card_value_for_natural_order/1)
+    else
+      # Return cards unchanged if not a complete sequence
+      cards
+    end
+  end
+
+  @doc """
+  Reorders any valid sequence (3+ cards) to natural numerical order.
+  For normal sequences: sorts by card value
+  For wrap-around sequences: handles A as high or low depending on context
+
+  ## Examples
+
+      iex> cards = [%Card{card: "5"}, %Card{card: "3"}, %Card{card: "4"}]
+      iex> GameEight.Game.Card.reorder_sequence(cards)
+      # Returns: [3, 4, 5]
+
+      iex> cards = [%Card{card: "King"}, %Card{card: "Ace"}, %Card{card: "Queen"}]
+      iex> GameEight.Game.Card.reorder_sequence(cards)
+      # Returns: [Queen, King, Ace] (Ace treated as high)
+  """
+  def reorder_sequence(cards) when is_list(cards) do
+    if valid_sequence?(cards) do
+      # Determine the best sorting approach for this sequence
+      cards
+      |> sort_sequence_intelligently()
+    else
+      # Return unchanged if not a valid sequence
+      cards
+    end
+  end
+
+  @doc """
+  Checks if cards form a complete sequence (exactly 13 cards with all values A-K of same suit).
+  """
+  def is_complete_sequence?(cards) when is_list(cards) do
+    # Must have exactly 13 cards
+    if length(cards) == 13 do
+      # All cards must be same suit
+      suits = Enum.map(cards, &get_card_type/1) |> Enum.uniq()
+
+      if length(suits) == 1 do
+        # Must contain all values from A to K
+        values =
+          cards
+          |> Enum.map(&get_card_value/1)
+          |> Enum.sort()
+
+        expected_values = @card_values |> Enum.sort()
+        values == expected_values
+      else
+        false
+      end
+    else
+      false
+    end
+  end
+
+  @doc """
   Checks if cards form a valid trio (3 cards of same value).
 
   Since we use 2 decks, cards can have the same suit if they come from different decks.
@@ -325,6 +399,53 @@ defmodule GameEight.Game.Card do
   # ===============================
   # PRIVATE HELPER FUNCTIONS
   # ===============================
+
+  # Gets card value for natural ordering (A=1, 2=2, ..., J=11, Q=12, K=13)
+  defp card_value_for_natural_order(card) do
+    card_str = get_card_value(card)
+    case card_str do
+      "Ace" -> 1
+      "Jack" -> 11
+      "Queen" -> 12
+      "King" -> 13
+      number_str -> String.to_integer(number_str)
+    end
+  end
+
+  # Gets card value for sequence sorting (handles wrap-around sequences properly)
+  defp sort_sequence_intelligently(cards) do
+    values = Enum.map(cards, &card_value/1)
+
+    # Check if it's a wrap-around sequence with Ace
+    has_ace = 1 in values
+    has_king = 13 in values
+    has_low_cards = Enum.any?(values, fn v -> v >= 2 and v <= 5 end)
+
+    cond do
+      # For K-A-2 type sequences, treat Ace as low (1)
+      has_ace and has_king and has_low_cards ->
+        cards |> Enum.sort_by(&card_value_for_natural_order/1)
+
+      # For Q-K-A type sequences, treat Ace as high (14)
+      has_ace and has_king and not has_low_cards ->
+        cards |> Enum.sort_by(&ace_high_value/1)
+
+      # Normal sequences
+      true ->
+        cards |> Enum.sort_by(&card_value_for_natural_order/1)
+    end
+  end
+
+  # Gets card value treating Ace as high (14)
+  defp ace_high_value(card) do
+    case get_card_value(card) do
+      "Ace" -> 14
+      "Jack" -> 11
+      "Queen" -> 12
+      "King" -> 13
+      number_str -> String.to_integer(number_str)
+    end
+  end
 
   # Checks if a list of numbers is consecutive
   defp consecutive?([]), do: false
