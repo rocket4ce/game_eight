@@ -7,6 +7,19 @@
 # General application configuration
 import Config
 
+config :game_eight, :scopes,
+  user: [
+    default: true,
+    module: GameEight.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :binary_id,
+    schema_table: :users,
+    test_data_fixture: GameEight.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
 config :game_eight,
   ecto_repos: [GameEight.Repo],
   generators: [timestamp_type: :utc_datetime, binary_id: true]
