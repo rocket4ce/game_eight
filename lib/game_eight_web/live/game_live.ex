@@ -340,7 +340,7 @@ defmodule GameEightWeb.GameLive do
     user_id = socket.assigns.current_user.id
 
     case GameEight.Game.Engine.draw_card(game_state.id, user_id) do
-      {:ok, updated_game_state, _updated_player} ->
+      {:ok, updated_game_state} ->
         updated_socket =
           socket
           |> update_game_state(updated_game_state)
