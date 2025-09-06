@@ -17,7 +17,38 @@ This file documents errors, issues, and their resolutions encountered during Gam
 *No errors documented yet - database setup verification pending*
 
 ### 3. Phoenix/LiveView Errors
-*No errors documented yet - LiveView implementation not started*
+
+#### Error: RuntimeError - not implemented on LiveView Streams with Enum.empty?
+- **Date:** September 6, 2025
+- **Context:** Loading the `/rooms` page which displays user's active game rooms
+- **Error Message:** 
+  ```
+  ** (RuntimeError) not implemented
+      (phoenix_live_view 1.1.11) lib/phoenix_live_view/live_stream.ex:135: Enumerable.Phoenix.LiveView.LiveStream.slice/1
+      (elixir 1.18.1) lib/enum.ex:1019: Enum.empty?/1
+  ```
+- **Cause:** Used `Enum.empty?(@streams.rooms)` in template - LiveView streams are not enumerable
+- **Solution:** 
+  1. Added `:rooms_empty?` assign to track empty state manually
+  2. Modified template to use `@rooms_empty?` instead of `Enum.empty?(@streams.rooms)`
+  3. Updated stream operations to maintain empty state
+- **Prevention:** Never use `Enum.*` functions on LiveView streams - they don't implement the Enumerable protocol
+- **Files Modified:** 
+  - `lib/game_eight_web/live/game_live/room_index.ex`
+  - `lib/game_eight_web/live/game_live/room_index.html.heex`
+
+#### Error: Protocol.UndefinedError - String.Chars not implemented for Phoenix.LiveView.Socket
+- **Date:** September 6, 2025
+- **Context:** Attempting to fix the stream enumerable error
+- **Error Message:** 
+  ```
+  ** (Protocol.UndefinedError) protocol String.Chars not implemented for type Phoenix.LiveView.Socket
+  ```
+- **Cause:** Incorrectly called `stream(socket, :rooms, [])` instead of `stream(:rooms, [])`
+- **Solution:** Fixed function call to use correct `stream/3` signature: `stream(:rooms, [])`
+- **Prevention:** Remember LiveView stream function signatures - first arg is the stream name, not socket
+- **Files Modified:** 
+  - `lib/game_eight_web/live/game_live/room_index.ex`
 
 ### 4. Asset Pipeline Errors
 *No errors documented yet - asset compilation verification pending*

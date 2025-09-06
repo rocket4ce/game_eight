@@ -6,7 +6,7 @@ defmodule GameEightWeb.GameLive.RoomIndex do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :rooms, [])}
+    {:ok, socket |> stream(:rooms, []) |> assign(:rooms_empty?, true)}
   end
 
   @impl true
@@ -20,6 +20,7 @@ defmodule GameEightWeb.GameLive.RoomIndex do
     
     socket
     |> assign(:page_title, "Mis Salas")
+    |> assign(:rooms_empty?, user_rooms == [])
     |> stream(:rooms, user_rooms, reset: true)
   end
 
@@ -72,9 +73,14 @@ defmodule GameEightWeb.GameLive.RoomIndex do
         {:ok, _} ->
           Phoenix.PubSub.broadcast(GameEight.PubSub, "rooms", {:room_deleted, room})
           
+          # Reload rooms to check if empty
+          current_user = socket.assigns.current_scope.user
+          remaining_rooms = Game.get_user_active_rooms(current_user.id)
+          
           {:noreply,
            socket
            |> put_flash(:info, "Sala eliminada exitosamente")
+           |> assign(:rooms_empty?, remaining_rooms == [])
            |> stream_delete(:rooms, room)}
 
         {:error, _} ->
@@ -92,9 +98,13 @@ defmodule GameEightWeb.GameLive.RoomIndex do
 
     case Game.leave_room(room, current_user) do
       {:ok, _} ->
+        # Reload rooms to check if empty
+        remaining_rooms = Game.get_user_active_rooms(current_user.id)
+        
         {:noreply,
          socket
          |> put_flash(:info, "Has salido de la sala")
+         |> assign(:rooms_empty?, remaining_rooms == [])
          |> stream_delete(:rooms, room)}
 
       {:error, _} ->
