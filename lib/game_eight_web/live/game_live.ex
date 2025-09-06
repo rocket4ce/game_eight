@@ -12,6 +12,7 @@ defmodule GameEightWeb.GameLive do
 
   alias GameEight.Game
   alias GameEight.Game.{GameState, PlayerGameState}
+  alias GameEight.Repo
   alias Phoenix.PubSub
 
   @impl true
@@ -24,19 +25,24 @@ defmodule GameEightWeb.GameLive do
     # Get current user (assuming we have authentication)
     current_user = socket.assigns[:current_user]
 
-    case load_game_data(room_id, current_user) do
-      {:ok, assigns} ->
-        socket =
-          socket
-          |> assign(assigns)
-          |> assign(:room_id, room_id)
-          |> assign(:selected_cards, [])
-          |> assign(:error_message, nil)
+    if is_nil(current_user) do
+      {:ok, push_navigate(socket, to: ~p"/users/log-in")}
+    else
+      case load_game_data(room_id, current_user) do
+        {:ok, assigns} ->
+          socket =
+            socket
+            |> assign(assigns)
+            |> assign(:room_id, room_id)
+            |> assign(:current_user, current_user)
+            |> assign(:selected_cards, [])
+            |> assign(:error_message, nil)
 
-        {:ok, socket}
+          {:ok, socket}
 
-      {:error, _reason} ->
-        {:ok, push_navigate(socket, to: ~p"/rooms")}
+        {:error, _reason} ->
+          {:ok, push_navigate(socket, to: ~p"/rooms")}
+      end
     end
   end
 
@@ -112,7 +118,7 @@ defmodule GameEightWeb.GameLive do
                     <div class="text-sm mb-2">Combinación <%= index + 1 %></div>
                     <div class="flex flex-wrap gap-1">
                       <%= for card <- combination.cards do %>
-                        <div class={["game-card", "game-card-#{card.deck}", card_type_class(card.type)]}>
+                        <div class={["game-card", "deck-#{card.deck}", card_type_class(card.type)]}>
                           <span class="card-value"><%= card.card %></span>
                           <span class="card-suit"><%= card_symbol(card.type) %></span>
                         </div>
@@ -141,7 +147,7 @@ defmodule GameEightWeb.GameLive do
                     phx-value-position={card.position}
                     class={[
                       "game-card",
-                      "game-card-#{card.deck}",
+                      "deck-#{card.deck}",
                       card_type_class(card.type),
                       if(card.position in @selected_cards, do: "selected", else: "")
                     ]}
@@ -207,7 +213,7 @@ defmodule GameEightWeb.GameLive do
           <%= if @discard_top_card do %>
             <div class="text-center">
               <div class="text-sm mb-2">Descarte</div>
-              <div class={["game-card", "game-card-#{@discard_top_card.deck}", card_type_class(@discard_top_card.type)]}>
+              <div class={["game-card", "deck-#{@discard_top_card.deck}", card_type_class(@discard_top_card.type)]}>
                 <span class="card-value"><%= @discard_top_card.card %></span>
                 <span class="card-suit"><%= card_symbol(@discard_top_card.type) %></span>
               </div>
@@ -277,22 +283,141 @@ defmodule GameEightWeb.GameLive do
   end
 
   def handle_event("roll_dice", _params, socket) do
-    # TODO: Implement dice rolling
-    {:noreply, socket}
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+
+    # Generate random dice value (1-6)
+    dice_value = Enum.random(1..6)
+
+    case GameEight.Game.Engine.roll_dice(game_state.id, user_id, dice_value) do
+      {:ok, updated_game_state} ->
+        # Update socket with new game state
+        updated_socket = update_game_state(socket, updated_game_state)
+
+        # Broadcast to other players
+        PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
+          {:dice_rolled, %{user_id: user_id, dice_value: dice_value, game_state: updated_game_state}})
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
   end
 
-  def handle_event("play_combination", %{"type" => _type}, socket) do
-    # TODO: Implement combination playing
-    {:noreply, socket}
+  def handle_event("play_combination", %{"type" => combination_type}, socket) do
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+    selected_positions = socket.assigns.selected_cards
+
+    # Get the selected cards from player's hand
+    hand_cards = socket.assigns.current_player_hand
+    selected_cards = Enum.filter(hand_cards, fn card ->
+      card.position in selected_positions
+    end)
+
+    case GameEight.Game.Engine.play_cards(game_state.id, user_id, selected_cards, combination_type) do
+      {:ok, updated_game_state, _updated_player} ->
+        updated_socket =
+          socket
+          |> update_game_state(updated_game_state)
+          |> assign(:selected_cards, [])
+          |> assign(:error_message, nil)
+
+        # Broadcast to other players
+        PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
+          {:cards_played, %{user_id: user_id, cards: selected_cards, type: combination_type}})
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
   end
 
   def handle_event("draw_card", _params, socket) do
-    # TODO: Implement card drawing
-    {:noreply, socket}
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+
+    case GameEight.Game.Engine.draw_card(game_state.id, user_id) do
+      {:ok, updated_game_state, _updated_player} ->
+        updated_socket =
+          socket
+          |> update_game_state(updated_game_state)
+          |> assign(:error_message, nil)
+
+        # Broadcast to other players
+        PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
+          {:card_drawn, %{user_id: user_id}})
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
   end
 
   def handle_event("pass_turn", _params, socket) do
-    # TODO: Implement turn passing
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+
+    case GameEight.Game.Engine.pass_turn(game_state.id, user_id) do
+      {:ok, updated_game_state} ->
+        updated_socket =
+          socket
+          |> update_game_state(updated_game_state)
+          |> assign(:selected_cards, [])
+          |> assign(:error_message, nil)
+
+        # Broadcast to other players
+        PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
+          {:turn_passed, %{user_id: user_id}})
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
+  end
+
+  # PubSub message handlers
+  @impl true
+  def handle_info({:dice_rolled, %{user_id: _user_id, dice_value: _dice_value, game_state: _game_state}}, socket) do
+    # Refresh game state when another player rolls dice
+    updated_socket = update_game_state(socket, socket.assigns.game_state)
+    {:noreply, updated_socket}
+  end
+
+  def handle_info({:cards_played, %{user_id: _user_id, cards: _cards, type: _type}}, socket) do
+    # Refresh game state when another player plays cards
+    updated_socket = update_game_state(socket, socket.assigns.game_state)
+    {:noreply, updated_socket}
+  end
+
+  def handle_info({:card_drawn, %{user_id: _user_id}}, socket) do
+    # Refresh game state when another player draws a card
+    updated_socket = update_game_state(socket, socket.assigns.game_state)
+    {:noreply, updated_socket}
+  end
+
+  def handle_info({:turn_passed, %{user_id: _user_id}}, socket) do
+    # Refresh game state when another player passes turn
+    updated_socket = update_game_state(socket, socket.assigns.game_state)
+    {:noreply, updated_socket}
+  end
+
+  def handle_info({:game_finished, %{winner_id: _winner_id, game_state: _game_state}}, socket) do
+    # Handle game finished event
+    updated_socket = update_game_state(socket, socket.assigns.game_state)
+    {:noreply, updated_socket}
+  end
+
+  # Catch-all for other PubSub messages
+  def handle_info(_message, socket) do
     {:noreply, socket}
   end
 
@@ -345,9 +470,20 @@ defmodule GameEightWeb.GameLive do
     end
   end
 
-  defp get_players_data(_game_state) do
-    # TODO: Implement proper player data loading with users
-    {:ok, []}
+  defp get_players_data(game_state) do
+    try do
+      players =
+        game_state
+        |> Repo.preload([player_game_states: :user])
+        |> Map.get(:player_game_states, [])
+        |> Enum.map(fn player_state ->
+          {player_state, player_state.user}
+        end)
+
+      {:ok, players}
+    rescue
+      _error -> {:error, :players_not_loaded}
+    end
   end
 
   defp find_current_player(players, user_id) do
@@ -357,9 +493,15 @@ defmodule GameEightWeb.GameLive do
     end
   end
 
-  defp get_current_player_name(_game_state, _players) do
-    # TODO: Implement current player name lookup
-    "Jugador Actual"
+  defp get_current_player_name(game_state, players) do
+    current_index = game_state.current_player_index
+
+    case Enum.find(players, fn {player, _user} ->
+      player.player_index == current_index
+    end) do
+      {_player, user} -> user.email
+      nil -> "Jugador #{current_index + 1}"
+    end
   end
 
   defp get_hand_size(player) do
@@ -369,9 +511,14 @@ defmodule GameEightWeb.GameLive do
     end
   end
 
-  defp is_current_turn?(_game_state, _user_id) do
-    # TODO: Implement turn checking logic
-    false
+  defp is_current_turn?(game_state, user_id) do
+    current_index = game_state.current_player_index
+
+    case game_state.turn_order do
+      order when is_list(order) and length(order) > current_index ->
+        Enum.at(order, current_index) == user_id
+      _ -> false
+    end
   end
 
   defp can_roll_dice?(game_state, player) do
@@ -393,6 +540,32 @@ defmodule GameEightWeb.GameLive do
       :diamonds -> "♦"
       :clubs -> "♣"
       :spades -> "♠"
+    end
+  end
+
+  # Helper functions for LiveView updates
+  defp update_game_state(socket, _game_state) do
+    current_user = socket.assigns.current_user
+
+    case load_game_data(socket.assigns.room_id, current_user) do
+      {:ok, assigns} ->
+        assign(socket, assigns)
+      {:error, _reason} ->
+        assign(socket, :error_message, "Error actualizando el estado del juego")
+    end
+  end
+
+  defp format_error_message(reason) do
+    case reason do
+      :game_not_found -> "Juego no encontrado"
+      :not_players_turn -> "No es tu turno"
+      :invalid_dice_phase -> "No puedes tirar dados en este momento"
+      :already_rolled_dice -> "Ya has tirado los dados"
+      :invalid_cards -> "Cartas inválidas seleccionadas"
+      :insufficient_cards -> "Necesitas seleccionar más cartas"
+      :invalid_combination -> "Combinación inválida"
+      :no_moves_left -> "No tienes movimientos restantes"
+      _ -> "Error desconocido: #{inspect(reason)}"
     end
   end
 end
