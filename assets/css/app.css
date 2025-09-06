@@ -103,3 +103,222 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+/* ================================= */
+/* GAME CARD STYLES */
+/* ================================= */
+
+/* Base card styles */
+.game-card {
+  @apply relative bg-white border-2 border-gray-300 rounded-lg shadow-md;
+  @apply flex flex-col items-center justify-between p-2;
+  @apply w-16 h-20 cursor-pointer select-none;
+  @apply transition-all duration-200 ease-in-out;
+  @apply hover:shadow-lg hover:border-gray-400 hover:-translate-y-1;
+}
+
+/* Card content positioning */
+.game-card .card-value {
+  @apply text-sm font-bold leading-none;
+}
+
+.game-card .card-suit {
+  @apply text-lg leading-none;
+}
+
+/* Deck color variants */
+.game-card.deck-red {
+  @apply bg-red-50 border-red-300;
+}
+
+.game-card.deck-blue {
+  @apply bg-blue-50 border-blue-300;
+}
+
+/* Suit color variants */
+.game-card.suit-hearts,
+.game-card.suit-diamonds {
+  @apply text-red-600;
+}
+
+.game-card.suit-spades,
+.game-card.suit-clubs {
+  @apply text-gray-800;
+}
+
+/* Card state variants */
+.game-card.selected {
+  @apply ring-2 ring-blue-500 border-blue-500 bg-blue-100;
+  @apply transform -translate-y-2;
+}
+
+.game-card.dragging {
+  @apply opacity-75 transform rotate-3 scale-105;
+  @apply z-50 shadow-2xl;
+}
+
+.game-card.drag-over {
+  @apply ring-2 ring-green-500 border-green-500 bg-green-100;
+}
+
+/* Drop zones */
+.drop-zone {
+  @apply border-2 border-dashed border-gray-300 rounded-lg p-4;
+  @apply transition-all duration-200;
+  @apply min-h-24 flex items-center justify-center;
+}
+
+.drop-zone.active {
+  @apply border-blue-500 bg-blue-50;
+}
+
+.drop-zone.valid-drop {
+  @apply border-green-500 bg-green-50;
+}
+
+.drop-zone.invalid-drop {
+  @apply border-red-500 bg-red-50;
+}
+
+/* Hand container */
+.player-hand {
+  @apply flex gap-2 p-4 bg-gray-100 rounded-lg min-h-28;
+  @apply items-center justify-center flex-wrap;
+}
+
+/* Table combinations */
+.table-combinations {
+  @apply grid gap-4 p-6 bg-green-100 rounded-lg min-h-48;
+  @apply items-start justify-center;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.combination {
+  @apply flex gap-1 p-3 bg-white rounded-lg shadow-sm border;
+  @apply min-h-24 items-center justify-center;
+}
+
+.combination.trio {
+  @apply border-orange-300 bg-orange-50;
+}
+
+.combination.sequence {
+  @apply border-purple-300 bg-purple-50;
+}
+
+/* Deck pile */
+.deck-pile {
+  @apply relative w-16 h-20 cursor-pointer;
+}
+
+.deck-pile .deck-card {
+  @apply absolute bg-gray-200 border border-gray-400 rounded-lg;
+  @apply w-full h-full shadow-sm;
+}
+
+.deck-pile .deck-card:nth-child(1) {
+  @apply transform translate-x-0 translate-y-0;
+}
+
+.deck-pile .deck-card:nth-child(2) {
+  @apply transform translate-x-0.5 translate-y-0.5;
+}
+
+.deck-pile .deck-card:nth-child(3) {
+  @apply transform translate-x-1 translate-y-1;
+}
+
+/* Game interface layout */
+.game-interface {
+  @apply grid grid-rows-3 h-screen gap-4 p-4;
+  grid-template-rows: 1fr 2fr 1fr;
+}
+
+.opponents-area {
+  @apply flex justify-around items-start;
+}
+
+.table-area {
+  @apply flex flex-col items-center justify-center;
+}
+
+.player-area {
+  @apply flex flex-col items-center gap-4;
+}
+
+/* Turn indicator */
+.turn-indicator {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+}
+
+.turn-indicator.active {
+  @apply bg-green-100 text-green-800 ring-2 ring-green-500;
+}
+
+.turn-indicator.inactive {
+  @apply bg-gray-100 text-gray-600;
+}
+
+/* Player status */
+.player-status.player-on {
+  @apply text-green-600 font-semibold;
+}
+
+.player-status.player-off {
+  @apply text-gray-500;
+}
+
+/* Animation classes */
+.card-deal {
+  animation: deal-card 0.5s ease-out;
+}
+
+@keyframes deal-card {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-played {
+  animation: play-card 0.8s ease-out;
+}
+
+@keyframes play-card {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-30px) scale(1.1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .game-card {
+    @apply w-12 h-16 p-1;
+  }
+
+  .game-card .card-value {
+    @apply text-xs;
+  }
+
+  .game-card .card-suit {
+    @apply text-sm;
+  }
+
+  .player-hand {
+    @apply gap-1 p-2;
+  }
+
+  .combination {
+    @apply gap-0.5 p-2;
+  }
+}

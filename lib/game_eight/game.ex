@@ -64,6 +64,18 @@ defmodule GameEight.Game do
   end
 
   @doc """
+  Gets a room with its users for game initialization.
+  """
+  def get_room_with_users(room_id) do
+    case Room
+         |> preload([:creator, room_users: :user])
+         |> Repo.get(room_id) do
+      nil -> {:error, :room_not_found}
+      room -> {:ok, %{room | users: Enum.map(room.room_users, & &1.user)}}
+    end
+  end
+
+  @doc """
   Creates a room.
 
   ## Examples
@@ -143,7 +155,7 @@ defmodule GameEight.Game do
   def join_room(%Room{} = room, %User{} = user) do
     # Cargar la sala con sus asociaciones para las validaciones
     room = room |> Repo.preload(:room_users)
-    
+
     cond do
       !Room.can_join?(room, user.id) ->
         {:error, :room_not_available}
@@ -260,7 +272,7 @@ defmodule GameEight.Game do
   def should_auto_start?(%Room{} = room) do
     if room.status == "pending" && Room.can_start?(room) do
       # Calcular si han pasado los minutos de timeout desde que se unió el primer jugador
-      first_player_joined = 
+      first_player_joined =
         room.room_users
         |> Enum.min_by(& &1.joined_at, DateTime)
         |> Map.get(:joined_at)
@@ -311,7 +323,7 @@ defmodule GameEight.Game do
   def get_room_stats(room_id) do
     room = get_room!(room_id)
     room_users = get_room_users(room_id)
-    
+
     %{
       total_players: length(room_users),
       active_players: Enum.count(room_users, & &1.status == "active"),
@@ -326,7 +338,7 @@ defmodule GameEight.Game do
   """
   def room_expired?(%Room{} = room, hours_threshold \\ 24) do
     case room.status do
-      "finished" -> 
+      "finished" ->
         # Salas terminadas que han estado así por más del threshold
         if room.finished_at do
           elapsed_hours = DateTime.diff(DateTime.utc_now(), room.finished_at, :hour)
@@ -334,12 +346,12 @@ defmodule GameEight.Game do
         else
           false
         end
-        
+
       "pending" ->
         # Salas pendientes que han estado así por más del threshold
         elapsed_hours = DateTime.diff(DateTime.utc_now(), room.inserted_at, :hour)
         elapsed_hours >= hours_threshold
-        
+
       _ -> false
     end
   end
@@ -348,19 +360,19 @@ defmodule GameEight.Game do
   Clean up expired rooms.
   """
   def cleanup_expired_rooms(hours_threshold \\ 24) do
-    expired_rooms = 
+    expired_rooms =
       Room
       |> Repo.all()
       |> Enum.filter(&room_expired?(&1, hours_threshold))
-    
-    deleted_count = 
+
+    deleted_count =
       expired_rooms
       |> Enum.map(&delete_room/1)
       |> Enum.count(fn
         {:ok, _} -> true
         _ -> false
       end)
-    
+
     {:ok, deleted_count}
   end
 end

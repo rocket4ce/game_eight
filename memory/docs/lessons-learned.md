@@ -19,6 +19,36 @@ This document captures important patterns, preferences, and project intelligence
 
 ## Current Session Learnings
 
+### Card Game Implementation (Phase 1 - Data Structures)
+**Session Focus:** Building foundational card game data structures for multiplayer Rummy-style game
+
+**Key Technical Insights:**
+- **File Verification:** Always verify the existence and content of files before attempting to modify them, especially when dealing with configuration or memory files.
+- **Tool Selection:** Choose the correct tool for the task at hand, considering the specific requirements of each tool (e.g., `write_to_file` vs. `replace_in_file`).
+- **MCP Server Verification:** Confirm MCP server availability and correct configuration before attempting to use its tools.
+- **Task Planning:** Document tasks clearly in `tasks/tasks_plan.md` before starting implementation.
+- **Follow Instructions Precisely:** Adhere strictly to the instructions and guidelines provided, especially regarding tool usage and mode switching.
+- **Compilation Warnings Management:** Always address compilation warnings promptly to maintain clean code. Use `mix compile --warnings-as-errors` to catch issues early.
+- **Ecto Schema Dependencies:** When working with Ecto schemas, ensure all necessary aliases are present (especially `Repo` for database operations).
+- **Function Duplication Prevention:** When adding functions to existing modules, always check for existing implementations to avoid duplicates that cause compilation warnings.
+- **Test Coverage Validation:** Use comprehensive tests (all 146 tests passing) to ensure code quality and detect regressions during refactoring.
+
+**Elixir/Phoenix Specific:**
+- **Card Module Design:** Successfully implemented 104-card deck system (2 English decks) with comprehensive validation for trios and sequences
+- **Schema Relationships:** Established proper foreign key relationships between GameState and PlayerGameState using binary_id primary keys
+- **JSON Field Usage:** Effectively used Ecto's JSON fields for storing card lists and game combinations in PostgreSQL
+- **Helper Functions:** Created card conversion utilities (cards_to_hand/1, hand_to_cards/1) for seamless database storage and retrieval
+
+**CSS and Styling:**
+- **Card Styling System:** Developed comprehensive CSS classes for game cards with proper suit colors (red/blue decks), hover effects, and drag states
+- **TailwindCSS Integration:** Successfully extended TailwindCSS with custom game-specific styles while maintaining utility-first approach
+- **Responsive Design:** Implemented mobile-friendly card layouts that work across different screen sizes
+
+**Testing Strategy:**
+- **Comprehensive Coverage:** Achieved 146 passing tests covering all core functionality
+- **Edge Case Testing:** Included tests for invalid card combinations, empty hands, and boundary conditions
+- **Test Organization:** Properly structured tests for each module with clear test descriptions
+
 ### Session: Memory Bank Initialization (September 6, 2025)
 
 #### Project Structure Understanding

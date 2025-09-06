@@ -54,6 +54,14 @@
 * The system must handle user interactions and game logic server-side
 * The system must provide responsive design for multiple screen sizes
 * The system must include proper error handling and user feedback
+* The system must implement a multiplayer card game with the following specifications:
+  - Two English decks (red and blue) totaling 104 cards
+  - 2-6 players per game, each receiving 8 cards initially
+  - Dice-based turn order determination
+  - Card combinations: trios (3+ same value) and sequences (4+ consecutive same suit)
+  - Player states: player_off (initial) and player_on (after first play)
+  - Turn limits: 5 moves maximum, 4 cards from hand maximum per turn
+  - Real-time card play, table updates, and turn management
 
 ### 6.2. Non-Functional Requirements
 * **Performance:** Page load times under 2 seconds, real-time updates with minimal latency
