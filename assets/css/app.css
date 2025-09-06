@@ -146,6 +146,10 @@
   @apply text-gray-800;
 }
 
+.game-card.suit-unknown {
+  @apply text-gray-500 border-dashed opacity-75;
+}
+
 /* Card state variants */
 .game-card.selected {
   @apply ring-2 ring-blue-500 border-blue-500 bg-blue-100;

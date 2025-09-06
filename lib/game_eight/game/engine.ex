@@ -254,17 +254,22 @@ defmodule GameEight.Game.Engine do
   end
 
   defp update_player_hands(game_state, hands) do
-    game_state.player_game_states
-    |> Enum.with_index()
-    |> Enum.each(fn {player_state, index} ->
-      hand_cards = Enum.at(hands, index, [])
-      hand_data = PlayerGameState.cards_to_hand(hand_cards)
+    results =
+      game_state.player_game_states
+      |> Enum.with_index()
+      |> Enum.map(fn {player_state, index} ->
+        hand_cards = Enum.at(hands, index, [])
+        hand_data = PlayerGameState.cards_to_hand(hand_cards)
 
-      PlayerGameState.hand_changeset(player_state, %{hand_cards: hand_data})
-      |> Repo.update()
-    end)
+        PlayerGameState.hand_changeset(player_state, %{hand_cards: hand_data})
+        |> Repo.update()
+      end)
 
-    {:ok, :updated}
+    # Check if all updates were successful
+    case Enum.find(results, fn result -> match?({:error, _}, result) end) do
+      nil -> {:ok, :updated}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   defp update_game_for_play(game_state, remaining_deck, turn_order) do

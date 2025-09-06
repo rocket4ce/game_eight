@@ -210,27 +210,62 @@ defmodule GameEight.Game.PlayerGameState do
     end
   end
 
-  defp valid_card_map?(%{"position" => pos, "card" => card, "type" => type, "deck" => deck})
-       when is_integer(pos) and is_binary(card) and is_atom(type) and is_atom(deck) do
-    true
+  defp valid_card_map?(card_map) when is_map(card_map) do
+    # Check if we have the required fields (either as strings or atoms)
+    position = get_value(card_map, "position", :position)
+    card = get_value(card_map, "card", :card)
+    type = get_value(card_map, "type", :type)
+    deck = get_value(card_map, "deck", :deck)
+
+    is_integer(position) and is_binary(card) and not is_nil(type) and not is_nil(deck)
   end
   defp valid_card_map?(_), do: false
 
   # Convert between Card structs and maps for JSON serialization
   defp card_to_map(%Card{} = card) do
-    Map.from_struct(card)
+    %{
+      "position" => card.position,
+      "card" => card.card,
+      "type" => card.type,
+      "deck" => card.deck
+    }
   end
 
   defp map_to_card(%{} = map) do
-    # Convert string keys to atom keys if needed
-    map_with_atoms =
-      map
-      |> Enum.map(fn {k, v} ->
-        key = if is_binary(k), do: String.to_existing_atom(k), else: k
-        {key, v}
-      end)
-      |> Enum.into(%{})
+    # Handle both string and atom keys from JSON
+    card_map = %{
+      position: get_value(map, "position", :position),
+      card: get_value(map, "card", :card),
+      type: atomize_suit(get_value(map, "type", :type)),
+      deck: atomize_deck(get_value(map, "deck", :deck))
+    }
 
-    struct(Card, map_with_atoms)
+    struct(Card, card_map)
   end
+
+  defp get_value(map, string_key, atom_key) do
+    map[string_key] || map[atom_key]
+  end
+
+  defp atomize_suit(suit) when is_binary(suit) do
+    case suit do
+      "spades" -> :spades
+      "hearts" -> :hearts
+      "diamonds" -> :diamonds
+      "clubs" -> :clubs
+      _ -> :spades # default fallback
+    end
+  end
+  defp atomize_suit(suit) when is_atom(suit), do: suit
+  defp atomize_suit(_), do: :spades
+
+  defp atomize_deck(deck) when is_binary(deck) do
+    case deck do
+      "red" -> :red
+      "blue" -> :blue
+      _ -> :red # default fallback
+    end
+  end
+  defp atomize_deck(deck) when is_atom(deck), do: deck
+  defp atomize_deck(_), do: :red
 end

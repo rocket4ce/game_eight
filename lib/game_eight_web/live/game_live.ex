@@ -438,7 +438,11 @@ defmodule GameEightWeb.GameLive do
       # Get deck information
       deck_cards = GameState.deck_to_cards(game_state)
       deck_count = length(deck_cards)
-      discard_top_card = List.first(deck_cards) # Simplified - should be discard pile
+      discard_top_card = case deck_cards do
+        [] -> nil
+        [card | _] when not is_nil(card.type) -> card
+        _ -> nil
+      end
 
       assigns = %{
         game_state: game_state,
@@ -529,6 +533,7 @@ defmodule GameEightWeb.GameLive do
       :diamonds -> "suit-diamonds"
       :clubs -> "suit-clubs"
       :spades -> "suit-spades"
+      _ -> "suit-unknown"  # Handle nil and any other unexpected values
     end
   end
 
@@ -538,6 +543,8 @@ defmodule GameEightWeb.GameLive do
       :diamonds -> "♦"
       :clubs -> "♣"
       :spades -> "♠"
+      nil -> "?"
+      _ -> "?"
     end
   end
 

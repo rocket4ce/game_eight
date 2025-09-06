@@ -174,6 +174,36 @@ defmodule GameEight.Game.GameState do
   end
 
   defp map_to_card(%{} = map) do
-    struct(Card, map)
+    # Handle both string and atom keys from JSON
+    card_map = %{
+      position: map["position"] || map[:position],
+      card: map["card"] || map[:card],
+      type: atomize_suit(map["type"] || map[:type]),
+      deck: atomize_deck(map["deck"] || map[:deck])
+    }
+
+    struct(Card, card_map)
   end
+
+  defp atomize_suit(suit) when is_binary(suit) do
+    case suit do
+      "spades" -> :spades
+      "hearts" -> :hearts
+      "diamonds" -> :diamonds
+      "clubs" -> :clubs
+      _ -> :spades # default fallback
+    end
+  end
+  defp atomize_suit(suit) when is_atom(suit), do: suit
+  defp atomize_suit(_), do: :spades
+
+  defp atomize_deck(deck) when is_binary(deck) do
+    case deck do
+      "red" -> :red
+      "blue" -> :blue
+      _ -> :red # default fallback
+    end
+  end
+  defp atomize_deck(deck) when is_atom(deck), do: deck
+  defp atomize_deck(_), do: :red
 end
