@@ -39,7 +39,7 @@ ALWAYS use the following Tidewave MCP tools instead of the Phoenix server or oth
 ## CRITICAL RULES - MCP Tools Usage
 
 ⚠️ **MANDATORY:** Never use the following commands:
-- `mix phx.server` 
+- `mix phx.server`
 - `iex -S mix phx.server`
 - Any direct Phoenix server commands
 - Direct database terminal commands

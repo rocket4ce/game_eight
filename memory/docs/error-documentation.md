@@ -62,7 +62,7 @@ The code was using direct struct field access (`&1.position`) instead of the exi
 
 **Context:**
 - User selected three Ace cards with different suits
-- Game rejected the valid trio combination 
+- Game rejected the valid trio combination
 - Error occurred in card validation logic in `GameEight.Game.Card.valid_trio?/1`
 
 **Root Cause:**
