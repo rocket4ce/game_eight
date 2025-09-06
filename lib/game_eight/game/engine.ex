@@ -462,9 +462,155 @@ defmodule GameEight.Game.Engine do
     |> Repo.update()
   end
 
+  @doc """
+  Reorders cards in a player's hand based on drag and drop.
+  """
+  def reorder_hand_cards(game_state_id, user_id, from_position, to_position) do
+    with {:ok, game_state} <- get_game_state_with_players(game_state_id),
+         {:ok, player_state} <- find_player_state(game_state, user_id),
+         {:ok, reordered_hand} <- reorder_hand(player_state.hand_cards, from_position, to_position),
+         {:ok, _updated_player} <- update_player_hand(player_state, reordered_hand),
+         {:ok, updated_game_state} <- get_game_state_with_players(game_state_id) do
+      {:ok, updated_game_state}
+    end
+  end
+
+  @doc """
+  Takes a card from a table combination and adds it to player's hand.
+  Validates that:
+  1. It's the current player's turn
+  2. The game is in playing state
+  3. The combination exists and has the specified card
+  4. Removing the card leaves at least 3 cards in the combination
+  5. The remaining combination is still valid (trio or sequence)
+  """
+  def take_table_card(game_state_id, user_id, combination_name, card_position) do
+    with {:ok, game_state} <- get_game_state_with_players(game_state_id),
+         :ok <- validate_player_turn(game_state, user_id),
+         :ok <- validate_game_playing(game_state),
+         {:ok, combination_cards} <- get_combination_cards(game_state, combination_name),
+         {:ok, card_to_take} <- find_card_in_combination(combination_cards, card_position),
+         :ok <- validate_can_take_card(combination_cards, card_to_take, combination_name),
+         {:ok, player_state} <- find_player_state(game_state, user_id),
+         {:ok, _updated_player} <- add_card_to_player_hand(player_state, card_to_take),
+         {:ok, updated_game_state} <- remove_card_from_combination(game_state, combination_name, card_to_take),
+         {:ok, final_game_state} <- get_game_state_with_players(updated_game_state.id) do
+      {:ok, final_game_state}
+    end
+  end
+
   defp get_next_player_index(game_state) do
     current_index = game_state.current_player_index
     player_count = length(game_state.turn_order)
     rem(current_index + 1, player_count)
+  end
+
+  # Helper functions for reordering hand cards
+  defp reorder_hand(hand_cards, from_position, to_position) do
+    hand_list =
+      hand_cards
+      |> Enum.map(fn {_key, card} -> card end)
+      |> Enum.sort_by(& &1.position)
+
+    case find_card_at_position(hand_list, from_position) do
+      {:ok, card_to_move} ->
+        updated_hand =
+          hand_list
+          |> List.delete(card_to_move)
+          |> List.insert_at(to_position, card_to_move)
+          |> Enum.with_index()
+          |> Enum.map(fn {card, new_position} ->
+            Map.put(card, :position, new_position)
+          end)
+          |> Enum.reduce(%{}, fn card, acc ->
+            Map.put(acc, Integer.to_string(card.position), card)
+          end)
+
+        {:ok, updated_hand}
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  defp find_card_at_position(hand_list, position) do
+    case Enum.find(hand_list, &(&1.position == position)) do
+      nil -> {:error, :card_not_found}
+      card -> {:ok, card}
+    end
+  end
+
+  defp update_player_hand(player_state, new_hand) do
+    PlayerGameState.changeset(player_state, %{hand_cards: new_hand})
+    |> Repo.update()
+  end
+
+  # Helper functions for taking table cards
+  defp get_combination_cards(game_state, combination_name) do
+    case Map.get(game_state.table_combinations, combination_name) do
+      nil -> {:error, :combination_not_found}
+      cards when is_list(cards) -> {:ok, cards}
+      _ -> {:error, :invalid_combination_format}
+    end
+  end
+
+  defp find_card_in_combination(combination_cards, card_position) do
+    position = if is_binary(card_position), do: String.to_integer(card_position), else: card_position
+
+    case Enum.find(combination_cards, &(&1.position == position)) do
+      nil -> {:error, :card_not_found_in_combination}
+      card -> {:ok, card}
+    end
+  end
+
+  defp validate_can_take_card(combination_cards, card_to_take, combination_name) do
+    remaining_cards = Enum.reject(combination_cards, &(&1.position == card_to_take.position))
+
+    # Must have at least 3 cards remaining
+    if length(remaining_cards) < 3 do
+      {:error, {:would_break_minimum_cards, combination_name, length(remaining_cards)}}
+    else
+      # Check if remaining cards still form a valid combination
+      if Card.valid_trio?(remaining_cards) or Card.valid_sequence?(remaining_cards) do
+        :ok
+      else
+        {:error, {:would_break_valid_combination, combination_name, length(remaining_cards)}}
+      end
+    end
+  end
+
+  defp add_card_to_player_hand(player_state, card) do
+    current_hand = player_state.hand_cards
+    new_position = map_size(current_hand)
+
+    updated_card = Map.put(card, :position, new_position)
+    updated_hand = Map.put(current_hand, Integer.to_string(new_position), updated_card)
+
+    PlayerGameState.changeset(player_state, %{hand_cards: updated_hand})
+    |> Repo.update()
+  end
+
+  defp remove_card_from_combination(game_state, combination_name, card_to_remove) do
+    current_combinations = game_state.table_combinations
+
+    case Map.get(current_combinations, combination_name) do
+      nil ->
+        {:error, :combination_not_found}
+
+      combination_cards ->
+        updated_cards = Enum.reject(combination_cards, &(&1.position == card_to_remove.position))
+        updated_combinations = Map.put(current_combinations, combination_name, updated_cards)
+
+        GameState.changeset(game_state, %{table_combinations: updated_combinations})
+        |> Repo.update()
+    end
+  end
+
+  defp validate_game_playing(game_state) do
+    if game_state.status == "playing" do
+      :ok
+    else
+      {:error, :game_not_in_playing_state}
+    end
   end
 end

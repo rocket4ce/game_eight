@@ -111,9 +111,27 @@ defmodule GameEightWeb.GameLive do
             <% else %>
               <div class="grid gap-4">
                 <%= for {{combination_name, cards}, index} <- Enum.with_index(@table_combinations) do %>
-                  <div class="bg-green-600 p-3 rounded">
+                  <div class={[
+                    "bg-green-600 p-3 rounded",
+                    "combination-container",
+                    if(@is_current_player and @game_state.status == "playing" and length(cards) > 3,
+                       do: "can-take-card",
+                       else: "cannot-take-card")
+                  ]}>
                     <div class="flex justify-between items-center mb-2">
-                      <div class="text-sm">Combinación <%= index + 1 %> (<%= combination_name %>)</div>
+                      <div class="text-sm">
+                        Combinación <%= index + 1 %> (<%= combination_name %>)
+                        <%= if @is_current_player and @game_state.status == "playing" do %>
+                          <span class={[
+                            "text-xs ml-2 px-2 py-1 rounded",
+                            if(length(cards) > 3,
+                               do: "bg-green-500 text-white",
+                               else: "bg-red-500 text-white")
+                          ]}>
+                            <%= if length(cards) > 3, do: "Puedes tomar", else: "Mínimo requerido" %>
+                          </span>
+                        <% end %>
+                      </div>
                       <%= if @is_current_player and @game_state.status == "playing" and length(@selected_cards) > 0 do %>
                         <button
                           phx-click="play_combination"
@@ -127,8 +145,17 @@ defmodule GameEightWeb.GameLive do
                       <% end %>
                     </div>
                     <div class="flex flex-wrap gap-1">
-                      <%= for card <- cards do %>
-                        <div class={["game-card", "deck-#{card.deck}", card_type_class(card.type)]}>
+                      <%= for {card, index} <- Enum.with_index(cards) do %>
+                        <div
+                          id={"table-card-#{combination_name}-#{index}"}
+                          class={["game-card", "deck-#{card.deck}", card_type_class(card.type)]}
+                          phx-hook="CardDragSource"
+                          data-position={card.position}
+                          data-source="table"
+                          data-combination-name={combination_name}
+                          data-card-value={card.card}
+                          data-card-type={card.type}
+                        >
                           <span class="card-value"><%= card.card %></span>
                           <span class="card-suit"><%= card_symbol(card.type) %></span>
                         </div>
@@ -144,17 +171,37 @@ defmodule GameEightWeb.GameLive do
         <!-- Current Player's Hand (only visible to them) -->
         <div class="mb-6">
           <h3 class="text-xl font-semibold mb-3">Tus Cartas</h3>
-          <div class="bg-green-700 p-4 rounded-lg">
+          <div
+            class="bg-green-700 p-4 rounded-lg"
+            id="player-hand-area"
+            phx-hook="CardDropZone"
+            data-drop-zone="hand"
+          >
             <%= if @current_player_hand == [] do %>
               <div class="text-center text-gray-300 py-8">
                 No tienes cartas en la mano
               </div>
             <% else %>
-              <div class="flex flex-wrap gap-2">
-                <%= for card <- @current_player_hand do %>
+              <div class="flex flex-wrap gap-2" id="hand-cards-container">
+                <%= for {card, index} <- Enum.with_index(@current_player_hand) do %>
+                  <!-- Drop zone before each card for reordering -->
+                  <div
+                    class="hand-drop-zone"
+                    id={"hand-drop-#{index}"}
+                    phx-hook="CardDropZone"
+                    data-drop-zone="hand-reorder"
+                    data-position={index}
+                  ></div>
+
                   <button
+                    id={"hand-card-#{card.position}"}
                     phx-click="toggle_card_selection"
                     phx-value-position={card.position}
+                    phx-hook="CardDragSource"
+                    data-position={card.position}
+                    data-source="hand"
+                    data-card-value={card.card}
+                    data-card-type={card.type}
                     class={[
                       "game-card",
                       "deck-#{card.deck}",
@@ -166,6 +213,15 @@ defmodule GameEightWeb.GameLive do
                     <span class="card-suit"><%= card_symbol(card.type) %></span>
                   </button>
                 <% end %>
+
+                <!-- Final drop zone after last card -->
+                <div
+                  class="hand-drop-zone"
+                  id={"hand-drop-#{length(@current_player_hand)}"}
+                  phx-hook="CardDropZone"
+                  data-drop-zone="hand-reorder"
+                  data-position={length(@current_player_hand)}
+                ></div>
               </div>
             <% end %>
           </div>
@@ -398,6 +454,50 @@ defmodule GameEightWeb.GameLive do
     end
   end
 
+  def handle_event("reorder_hand_card", %{"from_position" => from_pos_str, "to_position" => to_pos_str}, socket) do
+    from_position = String.to_integer(from_pos_str)
+    to_position = String.to_integer(to_pos_str)
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+
+    case GameEight.Game.Engine.reorder_hand_cards(game_state.id, user_id, from_position, to_position) do
+      {:ok, updated_game_state} ->
+        updated_socket =
+          socket
+          |> update_game_state(updated_game_state)
+          |> assign(:error_message, nil)
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
+  end
+
+  def handle_event("take_table_card", %{"combination_name" => combination_name, "card_position" => card_position}, socket) do
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+
+    case GameEight.Game.Engine.take_table_card(game_state.id, user_id, combination_name, card_position) do
+      {:ok, updated_game_state} ->
+        updated_socket =
+          socket
+          |> update_game_state(updated_game_state)
+          |> assign(:error_message, nil)
+
+        # Broadcast to other players
+        PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
+          {:card_taken, %{user_id: user_id, combination_name: combination_name, card_position: card_position}})
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
+  end
+
   # PubSub message handlers
   @impl true
   def handle_info({:dice_rolled, %{user_id: _user_id, dice_value: _dice_value, game_state: _game_state}}, socket) do
@@ -420,6 +520,12 @@ defmodule GameEightWeb.GameLive do
 
   def handle_info({:turn_passed, %{user_id: _user_id}}, socket) do
     # Refresh game state when another player passes turn
+    updated_socket = update_game_state(socket, socket.assigns.game_state)
+    {:noreply, updated_socket}
+  end
+
+  def handle_info({:card_taken, %{user_id: _user_id, combination_name: _combination_name, card_position: _card_position}}, socket) do
+    # Refresh game state when another player takes a card from table
     updated_socket = update_game_state(socket, socket.assigns.game_state)
     {:noreply, updated_socket}
   end
@@ -586,6 +692,14 @@ defmodule GameEightWeb.GameLive do
       :insufficient_cards -> "Necesitas seleccionar más cartas"
       :invalid_combination -> "Combinación inválida"
       :no_moves_left -> "No tienes movimientos restantes"
+      :combination_not_found -> "Combinación no encontrada en la mesa"
+      :card_not_found_in_combination -> "Carta no encontrada en la combinación"
+      {:would_break_minimum_cards, combination_name, remaining} ->
+        "No puedes tomar esa carta: la combinación '#{combination_name}' quedaría con #{remaining} cartas (mínimo 3)"
+      {:would_break_valid_combination, combination_name, remaining} ->
+        "No puedes tomar esa carta: la combinación '#{combination_name}' ya no sería válida con #{remaining} cartas"
+      :game_not_in_playing_state -> "El juego no está en estado de juego activo"
+      :card_not_found -> "Carta no encontrada"
       _ -> "Error desconocido: #{inspect(reason)}"
     end
   end

@@ -304,6 +304,130 @@
   }
 }
 
+/* Drag and Drop Styles */
+.game-card {
+  @apply cursor-move transition-all duration-200;
+}
+
+.game-card.dragging {
+  @apply opacity-60 scale-95 z-50;
+  transform: rotate(5deg);
+}
+
+.game-card.touch-dragging {
+  @apply opacity-80 shadow-2xl;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+/* Drop zones */
+.hand-drop-zone {
+  @apply w-2 h-20 bg-transparent border-2 border-dashed border-transparent transition-all duration-200;
+  min-width: 8px;
+}
+
+.hand-drop-zone.valid-drop {
+  @apply border-green-400 bg-green-100 bg-opacity-20;
+}
+
+.hand-drop-zone.invalid-drop {
+  @apply border-red-400 bg-red-100 bg-opacity-20;
+}
+
+.hand-drop-zone.touch-drag-over {
+  @apply border-blue-400 bg-blue-100 bg-opacity-30;
+}
+
+/* New: Drop zone hints during drag */
+.hand-drop-zone.valid-drop-hint {
+  @apply border-green-300 bg-green-50 bg-opacity-40;
+  animation: pulse-valid 1.5s infinite;
+}
+
+.hand-drop-zone.invalid-drop-hint {
+  @apply border-gray-300 bg-gray-50 bg-opacity-20;
+}
+
+@keyframes pulse-valid {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scaleX(1.2);
+  }
+}
+
+/* Hand area drop zone for table cards */
+#player-hand-area.valid-drop {
+  @apply ring-4 ring-green-400 ring-opacity-50 bg-green-600;
+}
+
+#player-hand-area.invalid-drop {
+  @apply ring-4 ring-red-400 ring-opacity-50 bg-red-600;
+}
+
+#player-hand-area.touch-drag-over {
+  @apply ring-4 ring-blue-400 ring-opacity-50 bg-blue-600;
+}
+
+/* Table cards drag states */
+.table-combinations .game-card:hover {
+  @apply scale-105 shadow-lg;
+}
+
+.table-combinations .game-card.dragging {
+  @apply opacity-50;
+}
+
+/* Visual feedback for valid/invalid table card taking */
+.combination-container.can-take-card {
+  @apply ring-2 ring-green-400 ring-opacity-50;
+}
+
+.combination-container.cannot-take-card {
+  @apply ring-2 ring-red-400 ring-opacity-50;
+}
+
+.combination-container.can-take-card .game-card {
+  @apply cursor-grab;
+}
+
+.combination-container.cannot-take-card .game-card {
+  @apply cursor-not-allowed opacity-75;
+}
+
+.combination-container.can-take-card .game-card:hover {
+  @apply transform scale-105 shadow-lg;
+}
+
+/* Animations */
+@keyframes pulse-drag {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.game-card.drag-hover {
+  animation: pulse-drag 1s infinite;
+}
+
+/* Mobile touch feedback */
+@media (max-width: 768px) {
+  .game-card.touch-dragging {
+    @apply transform-gpu;
+    will-change: transform;
+  }
+
+  .hand-drop-zone {
+    @apply w-4 h-16;
+    min-width: 16px;
+  }
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .game-card {
@@ -324,5 +448,22 @@
 
   .combination {
     @apply gap-0.5 p-2;
+  }
+
+  /* Larger touch targets for mobile */
+  .hand-drop-zone {
+    @apply w-6 h-16;
+    min-width: 24px;
+  }
+
+  /* Better touch feedback */
+  .game-card.touch-dragging {
+    @apply transform scale-110 shadow-2xl;
+  }
+
+  /* Ensure cards are easier to tap on mobile */
+  .game-card {
+    min-width: 48px;
+    min-height: 64px;
   }
 }

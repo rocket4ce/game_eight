@@ -16,6 +16,29 @@ This document captures important patterns, preferences, and project intelligence
 - **Asset Management:** Integrated custom CSS classes for cards with Phoenix component system
 - **PubSub Planning:** Prepared for real-time updates by subscribing to game-specific channels in mount/2
 
+### Drag-and-Drop Implementation (September 6, 2025)
+**Phoenix LiveView Drag-and-Drop Architecture:**
+- **Hook Pattern:** Use separate JavaScript hooks for drag sources (`CardDragSource`) and drop zones (`CardDropZone`) for clean separation of concerns
+- **Data Transfer:** Use JSON in `dataTransfer.setData()` to pass structured card information between drag events
+- **Touch Support:** Implement separate touch event handlers alongside drag events for mobile compatibility
+- **Visual Feedback:** Provide immediate visual feedback during drag operations using CSS classes and animations
+
+**Game Rule Validation:**
+- **Server-Side Validation:** Always validate game rules on the server side even with client-side hints
+- **Complex Validation:** For rules like "minimum 3 cards in combination", validate both count and remaining validity
+- **Error Messaging:** Provide specific, descriptive error messages in the user's language
+- **State Consistency:** Use database transactions to ensure game state remains consistent during complex operations
+
+**CSS and Styling:**
+- **Mobile-First:** Design touch targets to be at least 48px for mobile usability
+- **Animation Performance:** Use `transform` and `opacity` for smooth animations that don't trigger layout recalculations
+- **State Classes:** Use descriptive CSS classes like `.dragging`, `.valid-drop`, `.invalid-drop` for clear state management
+
+**LiveView Integration:**
+- **PubSub Integration:** Broadcast significant game state changes to all connected players
+- **Defensive Programming:** Always validate user permissions before processing events
+- **Context Preservation:** Maintain rich context (like current player, game phase) in socket assigns for quick access
+
 ### Database and Ecto Patterns
 *To be updated during schema development*
 
