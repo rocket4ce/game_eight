@@ -159,14 +159,43 @@ defmodule GameEight.Game.CardTest do
       refute Card.valid_sequence?(cards)
     end
 
-    test "returns false for less than 4 cards" do
+    test "returns false for less than 3 cards" do
+      cards = [
+        %Card{card: "Ace", type: :hearts, deck: :red, position: 0},
+        %Card{card: "2", type: :hearts, deck: :blue, position: 1}
+      ]
+
+      refute Card.valid_sequence?(cards)
+    end
+
+    test "returns true for valid 3-card sequence" do
       cards = [
         %Card{card: "Ace", type: :hearts, deck: :red, position: 0},
         %Card{card: "2", type: :hearts, deck: :blue, position: 1},
         %Card{card: "3", type: :hearts, deck: :red, position: 2}
       ]
 
-      refute Card.valid_sequence?(cards)
+      assert Card.valid_sequence?(cards)
+    end
+
+    test "returns true for wrap-around sequence (Q-K-A)" do
+      cards = [
+        %Card{card: "Queen", type: :hearts, deck: :red, position: 0},
+        %Card{card: "King", type: :hearts, deck: :blue, position: 1},
+        %Card{card: "Ace", type: :hearts, deck: :red, position: 2}
+      ]
+
+      assert Card.valid_sequence?(cards)
+    end
+
+    test "returns true for wrap-around sequence (K-A-2)" do
+      cards = [
+        %Card{card: "King", type: :spades, deck: :red, position: 0},
+        %Card{card: "Ace", type: :spades, deck: :blue, position: 1},
+        %Card{card: "2", type: :spades, deck: :red, position: 2}
+      ]
+
+      assert Card.valid_sequence?(cards)
     end
   end
 

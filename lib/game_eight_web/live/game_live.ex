@@ -112,7 +112,20 @@ defmodule GameEightWeb.GameLive do
               <div class="grid gap-4">
                 <%= for {{combination_name, cards}, index} <- Enum.with_index(@table_combinations) do %>
                   <div class="bg-green-600 p-3 rounded">
-                    <div class="text-sm mb-2">Combinación <%= index + 1 %> (<%= combination_name %>)</div>
+                    <div class="flex justify-between items-center mb-2">
+                      <div class="text-sm">Combinación <%= index + 1 %> (<%= combination_name %>)</div>
+                      <%= if @is_current_player and @game_state.status == "playing" and length(@selected_cards) > 0 do %>
+                        <button
+                          phx-click="play_combination"
+                          phx-value-type="add_to_combination"
+                          phx-value-target={combination_name}
+                          disabled={length(@selected_cards) == 0}
+                          class="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 px-2 py-1 text-xs rounded"
+                        >
+                          + Agregar (<%= length(@selected_cards) %>)
+                        </button>
+                      <% end %>
+                    </div>
                     <div class="flex flex-wrap gap-1">
                       <%= for card <- cards do %>
                         <div class={["game-card", "deck-#{card.deck}", card_type_class(card.type)]}>
@@ -175,10 +188,10 @@ defmodule GameEightWeb.GameLive do
               <button
                 phx-click="play_combination"
                 phx-value-type="sequence"
-                disabled={length(@selected_cards) < 4}
+                disabled={length(@selected_cards) < 3}
                 class="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 px-4 py-2 rounded"
               >
-                Jugar Secuencia (<%= length(@selected_cards) %> seleccionadas)
+                Jugar Escalera (<%= length(@selected_cards) %> seleccionadas)
               </button>
 
               <button
@@ -304,7 +317,7 @@ defmodule GameEightWeb.GameLive do
     end
   end
 
-  def handle_event("play_combination", %{"type" => combination_type}, socket) do
+  def handle_event("play_combination", %{"type" => combination_type} = params, socket) do
     game_state = socket.assigns.game_state
     user_id = socket.assigns.current_user.id
     selected_positions = socket.assigns.selected_cards
@@ -315,7 +328,10 @@ defmodule GameEightWeb.GameLive do
       card.position in selected_positions
     end)
 
-    case GameEight.Game.Engine.play_cards(game_state.id, user_id, selected_cards, combination_type) do
+    # Get target combination if it's an "add_to_combination" action
+    target_combination = Map.get(params, "target")
+
+    case GameEight.Game.Engine.play_cards(game_state.id, user_id, selected_cards, combination_type, target_combination) do
       {:ok, updated_game_state, _updated_player} ->
         updated_socket =
           socket

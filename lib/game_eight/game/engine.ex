@@ -336,10 +336,44 @@ defmodule GameEight.Game.Engine do
     end
   end
 
-  defp validate_combination(_cards, "add_to_combination", _game_state, _target_combination) do
-    # TODO: Implement validation for adding to existing combinations
-    # This would check if the cards can be validly added to the target combination
-    :ok
+  defp validate_combination(cards, "add_to_combination", game_state, target_combination) do
+    # Validate that we can add these cards to the specified combination
+    case get_target_combination_cards(game_state, target_combination) do
+      {:ok, existing_cards} ->
+        combined_cards = existing_cards ++ cards
+
+        # Check if the combined cards still form a valid combination
+        cond do
+          Card.valid_trio?(combined_cards) -> :ok
+          Card.valid_sequence?(combined_cards) -> :ok
+          true -> {:error, :invalid_addition}
+        end
+
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp get_target_combination_cards(game_state, target_combination_name) do
+    case Map.get(game_state.table_combinations, target_combination_name) do
+      nil -> {:error, :combination_not_found}
+      cards when is_list(cards) ->
+        # Convert from serialized maps to Card structs
+        card_structs = Enum.map(cards, &map_to_card/1)
+        {:ok, card_structs}
+      _ -> {:error, :invalid_combination_format}
+    end
+  end
+
+  defp map_to_card(%{"position" => pos, "card" => card, "type" => type, "deck" => deck}) do
+    %Card{
+      position: pos,
+      card: card,
+      type: String.to_atom(type),
+      deck: String.to_atom(deck)
+    }
+  end
+  defp map_to_card(%{position: pos, card: card, type: type, deck: deck}) do
+    %Card{position: pos, card: card, type: type, deck: deck}
   end
 
   defp remove_cards_from_hand(player_state, cards_to_remove) do

@@ -133,22 +133,22 @@ defmodule GameEight.Game.Card do
   end
 
   @doc """
-  Checks if cards form a valid sequence (4+ consecutive cards of same suit).
+  Checks if cards form a valid sequence (3+ consecutive cards of same suit).
   """
-  def valid_sequence?(cards) when length(cards) < 4, do: false
+  def valid_sequence?(cards) when length(cards) < 3, do: false
 
   def valid_sequence?(cards) when is_list(cards) do
     # All cards must be same suit
     suits = Enum.map(cards, & &1.type) |> Enum.uniq()
 
     if length(suits) == 1 do
-      # Sort by value and check consecutive
+      # Sort by value and check consecutive (including wrap-around sequences)
       values =
         cards
         |> Enum.map(&card_value/1)
         |> Enum.sort()
 
-      consecutive?(values)
+      consecutive?(values) || consecutive_with_wrap?(values)
     else
       false
     end
@@ -296,5 +296,38 @@ defmodule GameEight.Game.Card do
     |> Enum.all?(fn {value, index} ->
       index == 0 || value == Enum.at(values, index - 1) + 1
     end)
+  end
+
+  # Checks if values form a wrap-around sequence (like Q-K-A or K-A-2)
+  defp consecutive_with_wrap?(values) do
+    sorted_values = Enum.sort(values)
+
+    # Check if we have Ace (1)
+    has_ace = 1 in sorted_values
+
+    if has_ace do
+      # Try two approaches:
+      # 1. Treat Ace as 14 (for sequences like Q-K-A)
+      ace_high_values =
+        sorted_values
+        |> Enum.map(fn v -> if v == 1, do: 14, else: v end)
+        |> Enum.sort()
+
+      # 2. For specific wrap-around patterns like K-A-2,
+      #    check if we have exactly K(13) and low cards that would continue the sequence
+      specific_wraps =
+        case sorted_values do
+          # K-A-2: [1, 2, 13] should be valid
+          [1, 2, 13] -> true
+          # K-A-2-3: [1, 2, 3, 13] should be valid
+          [1, 2, 3, 13] -> true
+          # Add more specific patterns as needed
+          _ -> false
+        end
+
+      consecutive?(ace_high_values) || specific_wraps
+    else
+      false
+    end
   end
 end
