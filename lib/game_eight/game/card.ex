@@ -173,7 +173,9 @@ defmodule GameEight.Game.Card do
   end
 
   @doc """
-  Checks if cards form a valid trio (3+ cards of same value, different suits).
+  Checks if cards form a valid trio (3 cards of same value).
+
+  Since we use 2 decks, cards can have the same suit if they come from different decks.
   """
   def valid_trio?(cards) when length(cards) < 3, do: false
 
@@ -182,9 +184,9 @@ defmodule GameEight.Game.Card do
     values = Enum.map(cards, &get_card_value/1) |> Enum.uniq()
 
     if length(values) == 1 do
-      # All cards must have different suits (but can be same deck color)
-      suits = Enum.map(cards, &get_card_type/1) |> Enum.uniq()
-      length(suits) == length(cards)
+      # Para un trío válido: 3 cartas del mismo valor
+      # Permitir suits repetidos si vienen de diferentes barajas (usamos 2 barajas)
+      length(cards) == 3
     else
       false
     end

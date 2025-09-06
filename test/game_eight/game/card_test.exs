@@ -114,14 +114,14 @@ defmodule GameEight.Game.CardTest do
       refute Card.valid_trio?(cards)
     end
 
-    test "returns false for cards with same suit" do
+    test "returns true for cards with same suit from different decks" do
       cards = [
         %Card{card: "King", type: :spades, deck: :red, position: 0},
         %Card{card: "King", type: :spades, deck: :blue, position: 1},
         %Card{card: "King", type: :diamonds, deck: :red, position: 2}
       ]
 
-      refute Card.valid_trio?(cards)
+      assert Card.valid_trio?(cards)
     end
   end
 
