@@ -856,7 +856,7 @@ defmodule GameEight.Game.Engine do
       card_position = get_card_position(card)
       source_without_card = Enum.reject(source_cards, &(get_card_position(&1) == card_position))
 
-      # Add the card to target and check if it's still valid  
+      # Add the card to target and check if it's still valid
       target_with_card = target_cards ++ [card]
 
       cond do

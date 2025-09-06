@@ -137,7 +137,7 @@ export const CardDragSource = {
       // Check that source combination has more than 3 cards
       const combinationElement = document.querySelector(`[data-combination-name="${cardData.combinationName}"]`)
       if (!combinationElement) return false
-      
+
       const cardsInCombination = combinationElement.querySelectorAll('.game-card').length
       if (cardsInCombination <= 3) {
         console.log('Cannot move card: would leave less than 3 cards in source')
@@ -402,7 +402,7 @@ export const CardDropZone = {
       // Check that source combination has more than 3 cards
       const sourceCombinationElement = document.querySelector(`[data-combination-name="${cardData.combinationName}"]`)
       if (!sourceCombinationElement) return false
-      
+
       const cardsInSource = sourceCombinationElement.querySelectorAll('.game-card').length
       if (cardsInSource <= 3) {
         console.log('CardDropZone: Cannot move card, source would have less than 3 cards')

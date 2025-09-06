@@ -72,12 +72,12 @@ defmodule GameEightWeb.GameLive do
               {@error_message}
             </div>
           <% end %>
-          
+
     <!-- Game Status and Controls -->
           <div class="mb-6">
             {render_game_status(assigns)}
           </div>
-          
+
     <!-- Other Players (showing card backs only) -->
           <div class="mb-6">
             <h3 class="text-xl font-semibold mb-3">Otros Jugadores</h3>
@@ -102,7 +102,7 @@ defmodule GameEightWeb.GameLive do
               <% end %>
             </div>
           </div>
-          
+
     <!-- Table Cards (visible to all players) -->
           <div class="mb-6">
             <h3 class="text-xl font-semibold mb-3">Cartas en la Mesa</h3>
@@ -206,7 +206,7 @@ defmodule GameEightWeb.GameLive do
               <% end %>
             </div>
           </div>
-          
+
     <!-- Current Player's Hand (only visible to them) -->
           <div class="mb-6">
             <h3 class="text-xl font-semibold mb-3">Tus Cartas</h3>
@@ -259,7 +259,7 @@ defmodule GameEightWeb.GameLive do
                       <span class="card-suit">{card_symbol(card.type)}</span>
                     </div>
                   <% end %>
-                  
+
     <!-- Final drop zone after last card -->
                   <div
                     class="hand-drop-zone"
@@ -273,7 +273,7 @@ defmodule GameEightWeb.GameLive do
               <% end %>
             </div>
           </div>
-          
+
     <!-- Game Actions -->
           <%= if @is_current_player and @game_state.status == "playing" do %>
             <div class="bg-gray-800 p-4 rounded-lg">
@@ -329,7 +329,7 @@ defmodule GameEightWeb.GameLive do
                   ⏭️ Pasar Turno
                 </button>
               </div>
-              
+
     <!-- Leyenda para cartas mixtas -->
               <%= if length(@selected_table_cards) > 0 do %>
                 <div class="mt-2 text-xs text-yellow-300">
@@ -337,7 +337,7 @@ defmodule GameEightWeb.GameLive do
                 </div>
               <% end %>
             </div>
-            
+
     <!-- Instrucciones para Combinaciones Mixtas -->
             <%= if @is_current_player and @game_state.status == "playing" do %>
               <div class="mt-4 bg-blue-900 p-3 rounded-lg border border-blue-700">
@@ -385,7 +385,7 @@ defmodule GameEightWeb.GameLive do
               </div>
             <% end %>
           <% end %>
-          
+
     <!-- Deck and Discard Pile -->
           <div class="mt-6 flex justify-center gap-6">
             <div class="text-center">
