@@ -184,9 +184,9 @@ defmodule GameEight.Game.Card do
     values = Enum.map(cards, &get_card_value/1) |> Enum.uniq()
 
     if length(values) == 1 do
-      # Para un trío válido: 3 cartas del mismo valor
+      # Para un trío válido: al menos 3 cartas del mismo valor
       # Permitir suits repetidos si vienen de diferentes barajas (usamos 2 barajas)
-      length(cards) == 3
+      length(cards) >= 3
     else
       false
     end

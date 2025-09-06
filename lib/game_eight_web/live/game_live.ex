@@ -112,13 +112,19 @@ defmodule GameEightWeb.GameLive do
             <% else %>
               <div class="grid gap-4">
                 <%= for {{combination_name, cards}, index} <- Enum.with_index(@table_combinations) do %>
-                  <div class={[
-                    "bg-green-600 p-3 rounded",
-                    "combination-container",
-                    if(@is_current_player and @game_state.status == "playing" and length(cards) > 3,
-                       do: "can-take-card",
-                       else: "cannot-take-card")
-                  ]}>
+                  <div
+                    id={"combination-drop-zone-#{combination_name}"}
+                    phx-hook="CardDropZone"
+                    data-drop-zone="add-to-combination"
+                    data-combination-name={combination_name}
+                    data-is-current-turn={to_string(@is_current_player and @game_state.status == "playing")}
+                    class={[
+                      "bg-green-600 p-3 rounded",
+                      "combination-container",
+                      if(@is_current_player and @game_state.status == "playing" and length(cards) > 3,
+                         do: "can-take-card",
+                         else: "cannot-take-card")
+                    ]}>
                     <div class="flex justify-between items-center mb-2">
                       <div class="text-sm">
                         Combinación <%= index + 1 %> (<%= combination_name %>)
@@ -648,7 +654,48 @@ defmodule GameEightWeb.GameLive do
     end
   end
 
-  # PubSub message handlers
+  def handle_event("add_cards_to_combination", %{"combination_name" => combination_name, "card_positions" => card_positions}, socket) do
+    IO.puts("=== ADD CARDS TO COMBINATION EVENT ===")
+    IO.puts("Combination name: #{combination_name}")
+    IO.puts("Card positions: #{inspect(card_positions)}")
+
+    game_state = socket.assigns.game_state
+    user_id = socket.assigns.current_user.id
+
+    # Get the selected cards from player's hand
+    hand_cards = socket.assigns.current_player_hand
+    positions = if is_list(card_positions), do: card_positions, else: [card_positions]
+
+    IO.puts("Hand cards: #{inspect(Enum.map(hand_cards, &{&1.position, &1.card, &1.type}))}")
+    IO.puts("Looking for positions: #{inspect(positions)}")
+
+    selected_cards = Enum.filter(hand_cards, fn card ->
+      to_string(card.position) in positions
+    end)
+
+    IO.puts("Selected cards: #{inspect(Enum.map(selected_cards, &{&1.position, &1.card, &1.type}))}")
+
+    case GameEight.Game.Engine.play_cards(game_state.id, user_id, selected_cards, "add_to_combination", combination_name) do
+      {:ok, updated_game_state, _updated_player} ->
+        IO.puts("SUCCESS: Cards added to combination")
+        updated_socket =
+          socket
+          |> update_game_state(updated_game_state)
+          |> assign(:selected_cards, [])
+          |> assign(:error_message, nil)
+
+        # Broadcast to other players
+        PubSub.broadcast(GameEight.PubSub, "game:#{socket.assigns.room_id}",
+          {:cards_played, %{user_id: user_id, cards: selected_cards, type: "add_to_combination", target: combination_name}})
+
+        {:noreply, updated_socket}
+
+      {:error, reason} ->
+        IO.puts("ERROR: #{inspect(reason)}")
+        error_message = format_error_message(reason)
+        {:noreply, assign(socket, :error_message, error_message)}
+    end
+  end  # PubSub message handlers
   @impl true
   def handle_info({:dice_rolled, %{user_id: _user_id, dice_value: _dice_value, game_state: _game_state}}, socket) do
     # Refresh game state when another player rolls dice

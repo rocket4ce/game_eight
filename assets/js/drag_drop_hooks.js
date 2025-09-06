@@ -28,7 +28,7 @@ export const CardDragSource = {
 
     this.el.addEventListener('dragstart', (e) => {
       console.log('Drag started for card:', this.el.dataset.position)
-      
+
       const cardData = {
         position: this.el.dataset.position,
         source: this.el.dataset.source, // 'hand' or 'table'
@@ -82,6 +82,7 @@ export const CardDragSource = {
 
   isValidDropForZone(zone, cardData) {
     const dropZoneType = zone.dataset.dropZone
+    console.log('Checking valid drop for zone:', { dropZoneType, cardData })
 
     if (dropZoneType === 'hand-reorder') {
       return cardData.source === 'hand'
@@ -100,6 +101,23 @@ export const CardDragSource = {
       return cardsInCombination > 3
     }
 
+    if (dropZoneType === 'add-to-combination' && cardData.source === 'hand') {
+      console.log('Checking add-to-combination validation')
+      // Check if it's current player's turn using data attribute
+      const isCurrentTurn = zone.dataset.isCurrentTurn === 'true'
+      console.log('isCurrentTurn value:', zone.dataset.isCurrentTurn, 'parsed as:', isCurrentTurn)
+      if (!isCurrentTurn) {
+        console.log('Not current player turn')
+        return false
+      }
+
+      console.log('Current player turn confirmed, allowing drop')
+      // Always allow adding cards from hand to existing combinations
+      // Validation will be handled server-side
+      return true
+    }
+
+    console.log('No matching drop zone type, returning false')
     return false
   },
 
@@ -174,7 +192,8 @@ export const CardDragSource = {
 
         const dropData = {
           target: dropZone.dataset.dropZone,
-          targetPosition: dropZone.dataset.position || null
+          targetPosition: dropZone.dataset.position || null,
+          combinationName: dropZone.dataset.combinationName || null
         }
 
         this.handleDrop(cardData, dropData)
@@ -185,17 +204,32 @@ export const CardDragSource = {
   },
 
   handleDrop(cardData, dropData) {
+    console.log('HandleDrop called with:', { cardData, dropData })
+
     // Send event to LiveView based on drop type
     if (dropData.target === 'hand-reorder') {
+      console.log('Sending reorder_hand_card event')
       this.pushEvent('reorder_hand_card', {
         from_position: cardData.position,
         to_position: dropData.targetPosition
       })
     } else if (dropData.target === 'hand' && cardData.source === 'table') {
+      console.log('Sending take_table_card event')
       this.pushEvent('take_table_card', {
         combination_name: cardData.combinationName,
         card_position: cardData.position
       })
+    } else if (dropData.target === 'add-to-combination' && cardData.source === 'hand') {
+      console.log('Sending add_cards_to_combination event with:', {
+        combination_name: dropData.combinationName,
+        card_positions: [cardData.position]
+      })
+      this.pushEvent('add_cards_to_combination', {
+        combination_name: dropData.combinationName,
+        card_positions: [cardData.position]
+      })
+    } else {
+      console.log('No matching drop handler for:', { target: dropData.target, source: cardData.source })
     }
   }
 }
@@ -214,7 +248,7 @@ export const CardDropZone = {
 
   setupDropZone() {
     console.log('Setting up drop zone:', this.el.id, 'type:', this.el.dataset.dropZone)
-    
+
     this.el.addEventListener('dragover', (e) => {
       e.preventDefault()
       e.dataTransfer.dropEffect = 'move'
@@ -241,10 +275,11 @@ export const CardDropZone = {
       try {
         const cardData = JSON.parse(e.dataTransfer.getData('application/json'))
         console.log('Dropped card data:', cardData)
-        
+
         const dropData = {
           target: this.el.dataset.dropZone,
-          targetPosition: this.el.dataset.position || null
+          targetPosition: this.el.dataset.position || null,
+          combinationName: this.el.dataset.combinationName || null
         }
         console.log('Drop data:', dropData)
 
@@ -292,6 +327,22 @@ export const CardDropZone = {
       return this.validateTableCardTaking(cardData)
     }
 
+    // For adding cards to combinations: only allow hand cards to be dropped in combinations
+    if (dropZoneType === 'add-to-combination' && cardData.source === 'hand') {
+      console.log('CardDropZone isValidDrop: checking add-to-combination')
+      // Check if it's the current player's turn using data attribute
+      const isCurrentTurn = this.el.dataset.isCurrentTurn === 'true'
+      console.log('CardDropZone isCurrentTurn:', this.el.dataset.isCurrentTurn, 'parsed as:', isCurrentTurn)
+      if (!isCurrentTurn) {
+        console.log('CardDropZone: Not current turn, rejecting drop')
+        return false
+      }
+
+      console.log('CardDropZone: Current turn confirmed, allowing drop')
+      // Allow the drop - server will validate if the combination is valid
+      return true
+    }
+
     return false
   },
 
@@ -336,6 +387,11 @@ export const CardDropZone = {
         this.pushEvent('take_table_card', {
           combination_name: cardData.combinationName,
           card_position: cardData.position
+        })
+      } else if (dropData.target === 'add-to-combination' && cardData.source === 'hand') {
+        this.pushEvent('add_cards_to_combination', {
+          combination_name: dropData.combinationName,
+          card_positions: [cardData.position]
         })
       }
     }
