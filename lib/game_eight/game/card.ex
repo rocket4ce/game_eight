@@ -21,6 +21,23 @@ defmodule GameEight.Game.Card do
   @card_values ~w(Ace 2 3 4 5 6 7 8 9 10 Jack Queen King)
   @suits [:spades, :hearts, :diamonds, :clubs]
 
+  # Helper functions to get card fields from both structs and maps
+  defp get_card_value(%__MODULE__{card: value}), do: value
+  defp get_card_value(%{"card" => value}), do: value
+  defp get_card_value(%{card: value}), do: value
+
+  defp get_card_type(%__MODULE__{type: type}), do: type
+  defp get_card_type(%{"type" => type}), do: type
+  defp get_card_type(%{type: type}), do: type
+
+  defp get_card_deck(%__MODULE__{deck: deck}), do: deck
+  defp get_card_deck(%{"deck" => deck}), do: deck
+  defp get_card_deck(%{deck: deck}), do: deck
+
+  defp get_card_position(%__MODULE__{position: pos}), do: pos
+  defp get_card_position(%{"position" => pos}), do: pos
+  defp get_card_position(%{position: pos}), do: pos
+
   @doc """
   Creates a complete deck of 104 cards (2 English decks: red and blue).
 
@@ -122,8 +139,9 @@ defmodule GameEight.Game.Card do
   Gets the numeric value of a card for comparison purposes.
   Ace = 1, Jack = 11, Queen = 12, King = 13
   """
-  def card_value(%__MODULE__{card: card}) do
-    case card do
+  def card_value(card) do
+    card_str = get_card_value(card)
+    case card_str do
       "Ace" -> 1
       "Jack" -> 11
       "Queen" -> 12
@@ -139,7 +157,7 @@ defmodule GameEight.Game.Card do
 
   def valid_sequence?(cards) when is_list(cards) do
     # All cards must be same suit
-    suits = Enum.map(cards, & &1.type) |> Enum.uniq()
+    suits = Enum.map(cards, &get_card_type/1) |> Enum.uniq()
 
     if length(suits) == 1 do
       # Sort by value and check consecutive (including wrap-around sequences)
@@ -161,11 +179,11 @@ defmodule GameEight.Game.Card do
 
   def valid_trio?(cards) when is_list(cards) do
     # All cards must be same value
-    values = Enum.map(cards, & &1.card) |> Enum.uniq()
+    values = Enum.map(cards, &get_card_value/1) |> Enum.uniq()
 
     if length(values) == 1 do
       # All cards must have different suits (but can be same deck color)
-      suits = Enum.map(cards, & &1.type) |> Enum.uniq()
+      suits = Enum.map(cards, &get_card_type/1) |> Enum.uniq()
       length(suits) == length(cards)
     else
       false
@@ -256,6 +274,14 @@ defmodule GameEight.Game.Card do
     "card-#{pos}-#{String.downcase(card)}-#{type}-#{deck}"
   end
 
+  def dom_id(card) when is_map(card) do
+    pos = get_card_position(card)
+    card_value = get_card_value(card)
+    type = get_card_type(card)
+    deck = get_card_deck(card)
+    "card-#{pos}-#{String.downcase(card_value)}-#{type}-#{deck}"
+  end
+
   @doc """
   Creates data attributes for drag & drop functionality.
   Returns a map of HTML data attributes.
@@ -267,6 +293,17 @@ defmodule GameEight.Game.Card do
       "data-card-suit" => card.type,
       "data-card-deck" => card.deck,
       "data-card-position" => card.position,
+      "draggable" => "true"
+    }
+  end
+
+  def drag_data(card) when is_map(card) do
+    %{
+      "data-card-id" => dom_id(card),
+      "data-card-value" => get_card_value(card),
+      "data-card-suit" => get_card_type(card),
+      "data-card-deck" => get_card_deck(card),
+      "data-card-position" => get_card_position(card),
       "draggable" => "true"
     }
   end

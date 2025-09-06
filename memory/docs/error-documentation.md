@@ -10,6 +10,16 @@ This file documents errors, issues, and their resolutions encountered during Gam
 
 ## Error Categories
 
+### 0. Project Rules and Guidelines
+**CRITICAL RULE - NO PHOENIX SERVER COMMANDS**
+- **NEVER use:** `mix phx.server`, `iex -S mix phx.server`, or any direct Phoenix server commands
+- **ALWAYS use:** Tidewave MCP tools for ALL operations:
+  - Database operations: `pgsql_*` tools
+  - Elixir evaluation: `mcp_orvix-mcp_project_eval`
+  - Code analysis: `mcp_orvix-mcp_*` tools
+- **Reason:** Project is configured to use MCP (Model Context Protocol) tools exclusively
+- **Violation:** Any use of Phoenix server commands should be immediately corrected
+
 ### 1. Environment Setup Errors
 *No errors documented yet - environment verification pending*
 
@@ -46,6 +56,38 @@ The code was using direct struct field access (`&1.position`) instead of the exi
 - Fixed GenServer crashes during game play
 - Maintains compatibility with both storage formats (string/atom keys)
 - No breaking changes to existing functionality
+
+#### Card Trio Validation Issue (September 6, 2025)
+**Error:** "Las cartas seleccionadas no forman un trío válido (mismo valor)" when trying to play valid three Aces as a trio.
+
+**Context:**
+- User selected three Ace cards with different suits
+- Game rejected the valid trio combination 
+- Error occurred in card validation logic in `GameEight.Game.Card.valid_trio?/1`
+
+**Root Cause:**
+Card validation functions were using direct struct field access (`&1.card`, `&1.type`) but card data was stored as maps with string keys instead of structs with atom keys.
+
+**Solution:**
+1. Added helper functions in `GameEight.Game.Card` module:
+   - `get_card_value/1`, `get_card_type/1`, `get_card_deck/1`, `get_card_position/1`
+2. Updated `valid_trio?/1` to use helper functions instead of direct field access
+3. Updated `valid_sequence?/1` to use helper functions
+4. Updated `card_value/1` to handle both map and struct formats
+5. Added overloaded versions of `dom_id/1` and `drag_data/1` for map support
+
+**Files Modified:**
+- `/lib/game_eight/game/card.ex` (multiple functions updated)
+
+**Prevention:**
+- Always use helper functions when accessing card fields
+- Maintain consistency between database storage and in-memory representation
+- Add proper type guards and pattern matching for polymorphic data
+
+**Impact:**
+- Fixed trio and sequence validation for all card formats
+- Enables proper game play with card combinations
+- Maintains backward compatibility with existing code
 
 #### Error: RuntimeError - not implemented on LiveView Streams with Enum.empty?
 - **Date:** September 6, 2025

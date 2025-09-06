@@ -5,6 +5,16 @@ This document captures important patterns, preferences, and project intelligence
 
 ## Project Intelligence
 
+### Critical Project Rules (MANDATORY)
+**MCP Tools Usage - NEVER use Phoenix Server:**
+- **FORBIDDEN:** `mix phx.server`, `iex -S mix phx.server`, any direct Phoenix server commands
+- **MANDATORY:** Always use Tidewave MCP tools for ALL operations
+- **Database:** Use `pgsql_*` tools exclusively for database operations
+- **Elixir Code:** Use `mcp_orvix-mcp_project_eval` for code evaluation
+- **Analysis:** Use `mcp_orvix-mcp_*` tools for code analysis and documentation
+- **Reason:** Project architecture is designed around MCP (Model Context Protocol) tools
+- **Compliance:** This rule is non-negotiable and must be followed at all times
+
 ### Development Environment Insights
 *To be updated as development progresses*
 
@@ -34,6 +44,13 @@ This document captures important patterns, preferences, and project intelligence
 - **Helper Functions:** Always use helper functions like `get_card_position/1` instead of direct field access for data compatibility
 - **Pattern Matching:** When working with polymorphic data structures, use helper functions rather than assume specific key formats
 - **Database Storage:** Database JSON fields store maps with string keys, while Elixir structs use atom keys - handle both consistently
+- **Function Overloading:** Use multiple function clauses with guards to handle different data formats gracefully
+- **Validation Logic:** Game rule validation must handle polymorphic card data - test with both formats
+
+**Game Logic Validation:**
+- **Card Validation:** Functions like `valid_trio?/1` and `valid_sequence?/1` must handle both database-stored maps and in-memory structs
+- **Test Coverage:** Always test validation functions with multiple data formats (maps with string keys, structs with atom keys)
+- **Polymorphic Access:** Create helper functions that abstract field access for data that may come in different formats
 
 **CSS and Styling:**
 - **Mobile-First:** Design touch targets to be at least 48px for mobile usability

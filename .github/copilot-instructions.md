@@ -1,10 +1,11 @@
-# NEver user mix phx.server or terminal commands for database operations  insted ## Tidewave MCP Tools <MANDATORY>
+# NEVER use mix phx.server or terminal commands for database operations - ALWAYS use Tidewave MCP Tools <MANDATORY>
 This is a web application written using the Phoenix web framework.
 
 ## Project guidelines
 
 - Use `mix precommit` alias when you are done with all changes and fix any pending issues
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
+- **CRITICAL:** NEVER EVER use `mix phx.server` - ALWAYS use Tidewave MCP tools for ALL operations
 
 ## Tidewave MCP Tools
 
@@ -34,6 +35,20 @@ ALWAYS use the following Tidewave MCP tools instead of the Phoenix server or oth
 - `pgsql_visualize_schema` - Open interactive database schema visualization
 
 **NEVER use the Phoenix server (`mix phx.server`) or terminal commands for database operations. Always use the appropriate MCP tools listed above.**
+
+## CRITICAL RULES - MCP Tools Usage
+
+⚠️ **MANDATORY:** Never use the following commands:
+- `mix phx.server` 
+- `iex -S mix phx.server`
+- Any direct Phoenix server commands
+- Direct database terminal commands
+
+✅ **ALWAYS USE:** Tidewave MCP tools for:
+- Database operations: Use `pgsql_*` tools
+- Elixir evaluation: Use `mcp_orvix-mcp_project_eval`
+- Code analysis: Use `mcp_orvix-mcp_*` tools
+- Testing: Use appropriate MCP testing tools
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
