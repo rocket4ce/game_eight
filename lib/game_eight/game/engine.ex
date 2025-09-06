@@ -407,6 +407,11 @@ defmodule GameEight.Game.Engine do
     %Card{position: pos, card: card, type: type, deck: deck}
   end
 
+  # Helper function to get position from both maps and structs
+  defp get_card_position(%Card{position: pos}), do: pos
+  defp get_card_position(%{"position" => pos}), do: pos
+  defp get_card_position(%{position: pos}), do: pos
+
   defp remove_cards_from_hand(player_state, cards_to_remove) do
     PlayerGameState.remove_cards_from_hand(player_state, cards_to_remove)
   end
@@ -583,7 +588,10 @@ defmodule GameEight.Game.Engine do
   defp get_combination_cards(game_state, combination_name) do
     case Map.get(game_state.table_combinations, combination_name) do
       nil -> {:error, :combination_not_found}
-      cards when is_list(cards) -> {:ok, cards}
+      cards when is_list(cards) ->
+        # Convert maps to structs
+        struct_cards = Enum.map(cards, &map_to_card/1)
+        {:ok, struct_cards}
       _ -> {:error, :invalid_combination_format}
     end
   end
@@ -591,14 +599,17 @@ defmodule GameEight.Game.Engine do
   defp find_card_in_combination(combination_cards, card_position) do
     position = if is_binary(card_position), do: String.to_integer(card_position), else: card_position
 
-    case Enum.find(combination_cards, &(&1.position == position)) do
+    case Enum.find(combination_cards, &(get_card_position(&1) == position)) do
       nil -> {:error, :card_not_found_in_combination}
       card -> {:ok, card}
     end
   end
 
   defp validate_can_take_card(combination_cards, card_to_take, combination_name) do
-    remaining_cards = Enum.reject(combination_cards, &(&1.position == card_to_take.position))
+    card_to_take_position = get_card_position(card_to_take)
+    remaining_cards = Enum.reject(combination_cards, fn card ->
+      get_card_position(card) == card_to_take_position
+    end)
 
     # Must have at least 3 cards remaining
     if length(remaining_cards) < 3 do

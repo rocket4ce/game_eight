@@ -155,7 +155,7 @@ defmodule GameEightWeb.GameLive do
                           phx-value-card-id={"#{combination_name}-#{card.position}"}
                           class={[
                             "game-card cursor-pointer select-none relative",
-                            "deck-#{card.deck}",
+                            "deck-" <> to_string(card.deck),
                             card_type_class(card.type),
                             if("#{combination_name}-#{card.position}" in @selected_table_cards, do: "selected table-selected", else: ""),
                             if(length(cards) <= 3, do: "opacity-50 cursor-not-allowed", else: "")
@@ -509,7 +509,7 @@ defmodule GameEightWeb.GameLive do
         position = String.to_integer(position_str)
 
         # Find the card in the table combination
-        table_combinations = socket.assigns.game_state.table_combinations
+        table_combinations = socket.assigns.table_combinations
         combination_cards = Map.get(table_combinations, combination_name, [])
 
         card = Enum.find(combination_cards, fn card -> card.position == position end)

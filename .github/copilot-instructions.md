@@ -1,3 +1,4 @@
+# NEver user mix phx.server or terminal commands for database operations  insted ## Tidewave MCP Tools <MANDATORY>
 This is a web application written using the Phoenix web framework.
 
 ## Project guidelines
