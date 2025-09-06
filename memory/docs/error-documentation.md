@@ -33,9 +33,23 @@ This file documents errors, issues, and their resolutions encountered during Gam
   2. Modified template to use `@rooms_empty?` instead of `Enum.empty?(@streams.rooms)`
   3. Updated stream operations to maintain empty state
 - **Prevention:** Never use `Enum.*` functions on LiveView streams - they don't implement the Enumerable protocol
+#### Error: Compilation warnings for unused functions in Hall LiveView
+- **Date:** September 6, 2025
+- **Context:** Compilation warnings appeared for unused private functions in `GameEightWeb.GameLive.Hall`
+- **Error Message:** 
+  ```
+  warning: function stream_configure/1 is unused
+  warning: function room_status_text/1 is unused  
+  warning: function room_status_badge_class/1 is unused
+  warning: function room_players_text/1 is unused
+  warning: function load_public_rooms/1 is unused
+  warning: function can_join_room?/1 is unused
+  ```
+- **Cause:** Hall LiveView template was simplified for debugging but utility functions were left unused
+- **Solution:** Removed all unused private functions since current template only shows debug information
+- **Prevention:** Regularly run `mix compile` to catch unused function warnings early
 - **Files Modified:** 
-  - `lib/game_eight_web/live/game_live/room_index.ex`
-  - `lib/game_eight_web/live/game_live/room_index.html.heex`
+  - `lib/game_eight_web/live/game_live/hall.ex`
 
 #### Error: Protocol.UndefinedError - String.Chars not implemented for Phoenix.LiveView.Socket
 - **Date:** September 6, 2025

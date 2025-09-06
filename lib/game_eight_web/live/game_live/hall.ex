@@ -93,47 +93,4 @@ defmodule GameEightWeb.GameLive.Hall do
   def handle_info({:room_deleted, room}, socket) do
     {:noreply, stream_delete(socket, :public_rooms, room)}
   end
-
-  defp stream_configure(socket) do
-    socket
-    |> stream(:public_rooms, [])
-  end
-
-  defp load_public_rooms(socket) do
-    public_rooms = Game.list_public_rooms()
-    stream(socket, :public_rooms, public_rooms, reset: true)
-  end
-
-  defp room_players_text(room) do
-    current = case room.room_users do
-      users when is_list(users) -> length(users)
-      _ -> 0
-    end
-    max = room.max_players
-    "#{current}/#{max} jugadores"
-  end
-
-  defp room_status_badge_class(room) do
-    case room.status do
-      "pending" -> "badge-warning"
-      "started" -> "badge-success"
-      "finished" -> "badge-neutral"
-    end
-  end
-
-  defp room_status_text(room) do
-    case room.status do
-      "pending" -> "Esperando"
-      "started" -> "En juego"
-      "finished" -> "Terminada"
-    end
-  end
-
-  defp can_join_room?(room) do
-    room_users_count = case room.room_users do
-      users when is_list(users) -> length(users)
-      _ -> 0
-    end
-    room.status == "pending" && room_users_count < room.max_players
-  end
 end
