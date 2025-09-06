@@ -468,8 +468,8 @@ defmodule GameEight.Game.Engine do
   def reorder_hand_cards(game_state_id, user_id, from_position, to_position) do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          {:ok, player_state} <- find_player_state(game_state, user_id),
-         {:ok, reordered_hand} <- reorder_hand(player_state.hand_cards, from_position, to_position),
-         {:ok, _updated_player} <- update_player_hand(player_state, reordered_hand),
+         {:ok, reordered_hand_structs} <- reorder_hand_structs(player_state, from_position, to_position),
+         {:ok, _updated_player} <- update_player_hand_from_structs(player_state, reordered_hand_structs),
          {:ok, updated_game_state} <- get_game_state_with_players(game_state_id) do
       {:ok, updated_game_state}
     end
@@ -506,24 +506,19 @@ defmodule GameEight.Game.Engine do
   end
 
   # Helper functions for reordering hand cards
-  defp reorder_hand(hand_cards, from_position, to_position) do
-    hand_list =
-      hand_cards
-      |> Enum.map(fn {_key, card} -> card end)
-      |> Enum.sort_by(& &1.position)
-
-    case find_card_at_position(hand_list, from_position) do
+  defp reorder_hand_structs(player_state, from_position, to_position) do
+    # Convertir a structs Card
+    hand_cards = PlayerGameState.hand_to_cards(player_state)
+    
+    case find_card_at_position_struct(hand_cards, from_position) do
       {:ok, card_to_move} ->
         updated_hand =
-          hand_list
+          hand_cards
           |> List.delete(card_to_move)
           |> List.insert_at(to_position, card_to_move)
           |> Enum.with_index()
           |> Enum.map(fn {card, new_position} ->
-            Map.put(card, :position, new_position)
-          end)
-          |> Enum.reduce(%{}, fn card, acc ->
-            Map.put(acc, Integer.to_string(card.position), card)
+            %{card | position: new_position}
           end)
 
         {:ok, updated_hand}
@@ -533,11 +528,19 @@ defmodule GameEight.Game.Engine do
     end
   end
 
-  defp find_card_at_position(hand_list, position) do
+  defp find_card_at_position_struct(hand_list, position) do
     case Enum.find(hand_list, &(&1.position == position)) do
       nil -> {:error, :card_not_found}
       card -> {:ok, card}
     end
+  end
+
+  defp update_player_hand_from_structs(player_state, card_structs) do
+    hand_data = PlayerGameState.cards_to_hand(card_structs)
+    
+    player_state
+    |> PlayerGameState.hand_changeset(%{hand_cards: hand_data})
+    |> Repo.update()
   end
 
   defp update_player_hand(player_state, new_hand) do

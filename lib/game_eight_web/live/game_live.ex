@@ -193,8 +193,9 @@ defmodule GameEightWeb.GameLive do
                     data-position={index}
                   ></div>
 
-                  <button
+                  <div
                     id={"hand-card-#{card.position}"}
+                    draggable="true"
                     phx-click="toggle_card_selection"
                     phx-value-position={card.position}
                     phx-hook="CardDragSource"
@@ -203,7 +204,7 @@ defmodule GameEightWeb.GameLive do
                     data-card-value={card.card}
                     data-card-type={card.type}
                     class={[
-                      "game-card",
+                      "game-card cursor-pointer select-none",
                       "deck-#{card.deck}",
                       card_type_class(card.type),
                       if(card.position in @selected_cards, do: "selected", else: "")
@@ -211,7 +212,7 @@ defmodule GameEightWeb.GameLive do
                   >
                     <span class="card-value"><%= card.card %></span>
                     <span class="card-suit"><%= card_symbol(card.type) %></span>
-                  </button>
+                  </div>
                 <% end %>
 
                 <!-- Final drop zone after last card -->

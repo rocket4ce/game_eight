@@ -11,19 +11,24 @@
 // Hook for making cards draggable
 export const CardDragSource = {
   mounted() {
+    console.log('CardDragSource mounted for element:', this.el.id)
     this.setupDragging()
     this.setupTouchEvents()
   },
 
   updated() {
+    console.log('CardDragSource updated for element:', this.el.id)
     this.setupDragging()
     this.setupTouchEvents()
   },
 
   setupDragging() {
     this.el.draggable = true
+    this.el.style.cursor = 'grab'
 
     this.el.addEventListener('dragstart', (e) => {
+      console.log('Drag started for card:', this.el.dataset.position)
+      
       const cardData = {
         position: this.el.dataset.position,
         source: this.el.dataset.source, // 'hand' or 'table'
@@ -37,6 +42,7 @@ export const CardDragSource = {
 
       // Add visual feedback
       this.el.classList.add('dragging')
+      this.el.style.cursor = 'grabbing'
 
       // Store reference for cleanup
       this.draggedElement = this.el
@@ -46,7 +52,9 @@ export const CardDragSource = {
     })
 
     this.el.addEventListener('dragend', (e) => {
+      console.log('Drag ended for card:', this.el.dataset.position)
       this.el.classList.remove('dragging')
+      this.el.style.cursor = 'grab'
       this.draggedElement = null
 
       // Clean up visual hints
@@ -195,14 +203,18 @@ export const CardDragSource = {
 // Hook for drop zones (hand area, specific positions)
 export const CardDropZone = {
   mounted() {
+    console.log('CardDropZone mounted for element:', this.el.id)
     this.setupDropZone()
   },
 
   updated() {
+    console.log('CardDropZone updated for element:', this.el.id)
     this.setupDropZone()
   },
 
   setupDropZone() {
+    console.log('Setting up drop zone:', this.el.id, 'type:', this.el.dataset.dropZone)
+    
     this.el.addEventListener('dragover', (e) => {
       e.preventDefault()
       e.dataTransfer.dropEffect = 'move'
@@ -223,17 +235,23 @@ export const CardDropZone = {
 
     this.el.addEventListener('drop', (e) => {
       e.preventDefault()
+      console.log('Drop event triggered on:', this.el.id)
       this.el.classList.remove('valid-drop', 'invalid-drop')
 
       try {
         const cardData = JSON.parse(e.dataTransfer.getData('application/json'))
+        console.log('Dropped card data:', cardData)
+        
         const dropData = {
           target: this.el.dataset.dropZone,
           targetPosition: this.el.dataset.position || null
         }
+        console.log('Drop data:', dropData)
 
         if (this.isValidDrop(cardData)) {
           this.handleDrop(cardData, dropData)
+        } else {
+          console.log('Invalid drop attempted')
         }
       } catch (error) {
         console.error('Error handling drop:', error)

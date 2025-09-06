@@ -326,25 +326,30 @@
 }
 
 .hand-drop-zone.valid-drop {
-  @apply border-green-400 bg-green-100 bg-opacity-20;
+  @apply border-green-400 bg-green-100;
+  opacity: 0.4;
 }
 
 .hand-drop-zone.invalid-drop {
-  @apply border-red-400 bg-red-100 bg-opacity-20;
+  @apply border-red-400 bg-red-100;
+  opacity: 0.4;
 }
 
 .hand-drop-zone.touch-drag-over {
-  @apply border-blue-400 bg-blue-100 bg-opacity-30;
+  @apply border-blue-400 bg-blue-100;
+  opacity: 0.6;
 }
 
 /* New: Drop zone hints during drag */
 .hand-drop-zone.valid-drop-hint {
-  @apply border-green-300 bg-green-50 bg-opacity-40;
+  @apply border-green-300 bg-green-50;
+  opacity: 0.8;
   animation: pulse-valid 1.5s infinite;
 }
 
 .hand-drop-zone.invalid-drop-hint {
-  @apply border-gray-300 bg-gray-50 bg-opacity-20;
+  @apply border-gray-300 bg-gray-50;
+  opacity: 0.4;
 }
 
 @keyframes pulse-valid {
@@ -360,15 +365,18 @@
 
 /* Hand area drop zone for table cards */
 #player-hand-area.valid-drop {
-  @apply ring-4 ring-green-400 ring-opacity-50 bg-green-600;
+  @apply ring-4 ring-green-400 bg-green-600;
+  ring-opacity: 0.5;
 }
 
 #player-hand-area.invalid-drop {
-  @apply ring-4 ring-red-400 ring-opacity-50 bg-red-600;
+  @apply ring-4 ring-red-400 bg-red-600;
+  ring-opacity: 0.5;
 }
 
 #player-hand-area.touch-drag-over {
-  @apply ring-4 ring-blue-400 ring-opacity-50 bg-blue-600;
+  @apply ring-4 ring-blue-400 bg-blue-600;
+  ring-opacity: 0.5;
 }
 
 /* Table cards drag states */
@@ -382,11 +390,13 @@
 
 /* Visual feedback for valid/invalid table card taking */
 .combination-container.can-take-card {
-  @apply ring-2 ring-green-400 ring-opacity-50;
+  @apply ring-2 ring-green-400;
+  ring-opacity: 0.5;
 }
 
 .combination-container.cannot-take-card {
-  @apply ring-2 ring-red-400 ring-opacity-50;
+  @apply ring-2 ring-red-400;
+  ring-opacity: 0.5;
 }
 
 .combination-container.can-take-card .game-card {
