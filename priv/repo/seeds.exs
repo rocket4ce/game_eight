@@ -23,10 +23,12 @@ users = [
   %{email: "player4@example.com", password: "securepassword123"}
 ]
 
-created_users = 
+created_users =
   Enum.map(users, fn user_attrs ->
     case Accounts.register_user(user_attrs) do
-      {:ok, user} -> user
+      {:ok, user} ->
+        user
+
       {:error, _} ->
         # Si el usuario ya existe, lo obtenemos
         Accounts.get_user_by_email(user_attrs.email)
@@ -39,21 +41,23 @@ created_users =
 IO.puts("Creating example rooms...")
 
 # Sala pública con algunos jugadores
-{:ok, public_room} = Game.create_room(%{
-  name: "Sala Pública - El Ocho",
-  type: "public",
-  creator_id: user1.id
-})
+{:ok, public_room} =
+  Game.create_room(%{
+    name: "Sala Pública - El Ocho",
+    type: "public",
+    creator_id: user1.id
+  })
 
 {:ok, _} = Game.join_room(public_room, user1)
 {:ok, _} = Game.join_room(public_room, user2)
 
 # Sala privada
-{:ok, private_room} = Game.create_room(%{
-  name: "Sala Privada - Amigos",
-  type: "private",
-  creator_id: user3.id
-})
+{:ok, private_room} =
+  Game.create_room(%{
+    name: "Sala Privada - Amigos",
+    type: "private",
+    creator_id: user3.id
+  })
 
 {:ok, _} = Game.join_room(private_room, user3)
 {:ok, _} = Game.join_room(private_room, user4)
@@ -67,5 +71,11 @@ public_stats = Game.get_room_stats(public_room.id)
 private_stats = Game.get_room_stats(private_room.id)
 
 IO.puts("\n📊 Room Statistics:")
-IO.puts("Public room: #{public_stats.total_players} players, can start: #{public_stats.can_start}")
-IO.puts("Private room: #{private_stats.total_players} players, can start: #{private_stats.can_start}")
+
+IO.puts(
+  "Public room: #{public_stats.total_players} players, can start: #{public_stats.can_start}"
+)
+
+IO.puts(
+  "Private room: #{private_stats.total_players} players, can start: #{private_stats.can_start}"
+)

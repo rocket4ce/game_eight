@@ -13,12 +13,13 @@ defmodule GameEight.Game.EngineTest do
       user2 = user_fixture()
 
       # Create room
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 6,
-        creator_id: user1.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 6,
+          creator_id: user1.id,
+          type: "public"
+        })
 
       # Add users to room
       {:ok, _} = Game.join_room(room, user1)
@@ -37,19 +38,22 @@ defmodule GameEight.Game.EngineTest do
       assert game_state.cards_per_player == 8
 
       # Verify player states were created for both users
-      player_states = Repo.all(PlayerGameState) |> Enum.filter(&(&1.game_state_id == game_state.id))
+      player_states =
+        Repo.all(PlayerGameState) |> Enum.filter(&(&1.game_state_id == game_state.id))
+
       assert length(player_states) == 2
     end
 
     test "fails for room that hasn't started" do
       user = user_fixture()
 
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 4,
-        creator_id: user.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 4,
+          creator_id: user.id,
+          type: "public"
+        })
 
       # Don't start the room
       assert {:error, :room_not_started} = Engine.initialize_game(room.id)
@@ -58,12 +62,13 @@ defmodule GameEight.Game.EngineTest do
     test "fails for room with insufficient players" do
       user = user_fixture()
 
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 4,
-        creator_id: user.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 4,
+          creator_id: user.id,
+          type: "public"
+        })
 
       # Add only one user
       {:ok, _} = Game.join_room(room, user)
@@ -83,12 +88,13 @@ defmodule GameEight.Game.EngineTest do
       user2 = user_fixture()
 
       # Create and setup room
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 6,
-        creator_id: user1.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 6,
+          creator_id: user1.id,
+          type: "public"
+        })
 
       {:ok, _} = Game.join_room(room, user1)
       {:ok, _} = Game.join_room(room, user2)

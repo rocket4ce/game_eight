@@ -11,7 +11,7 @@ defmodule GameEightWeb.GameLive.Hall do
 
   @impl true
   def handle_params(_params, _uri, socket) do
-    {:noreply, 
+    {:noreply,
      socket
      |> assign(:page_title, "GameEight - Hall")}
   end
@@ -24,7 +24,7 @@ defmodule GameEightWeb.GameLive.Hall do
       room ->
         case Game.join_room(room, current_user) do
           {:ok, _room_user} ->
-            {:noreply, 
+            {:noreply,
              socket
              |> put_flash(:info, "Te has unido a la sala exitosamente")
              |> push_navigate(to: ~p"/rooms/#{room_id}")}
@@ -33,7 +33,7 @@ defmodule GameEightWeb.GameLive.Hall do
             {:noreply, put_flash(socket, :error, "La sala no está disponible")}
 
           {:error, :already_in_room} ->
-            {:noreply, 
+            {:noreply,
              socket
              |> put_flash(:info, "Ya estás en esta sala")
              |> push_navigate(to: ~p"/rooms/#{room_id}")}
@@ -53,7 +53,7 @@ defmodule GameEightWeb.GameLive.Hall do
 
     case Game.join_private_room(access_key, current_user) do
       {:ok, room_user} ->
-        {:noreply, 
+        {:noreply,
          socket
          |> put_flash(:info, "Te has unido a la sala privada exitosamente")
          |> push_navigate(to: ~p"/rooms/#{room_user.room_id}")}
@@ -66,7 +66,8 @@ defmodule GameEightWeb.GameLive.Hall do
 
       {:error, :already_in_room} ->
         room = Game.get_room_by_access_key(access_key)
-        {:noreply, 
+
+        {:noreply,
          socket
          |> put_flash(:info, "Ya estás en esta sala")
          |> push_navigate(to: ~p"/rooms/#{room.id}")}

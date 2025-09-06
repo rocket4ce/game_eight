@@ -60,7 +60,7 @@ defmodule GameEight.Game.CardTest do
 
       assert length(hands) == 3
       assert Enum.all?(hands, &(length(&1) == 8))
-      assert length(remaining) == 104 - (3 * 8)
+      assert length(remaining) == 104 - 3 * 8
     end
 
     test "returns error when insufficient cards" do
@@ -228,8 +228,10 @@ defmodule GameEight.Game.CardTest do
 
     test "css_classes/1 returns proper CSS classes", %{card: card} do
       classes = Card.css_classes(card)
-      assert String.contains?(classes, "text-gray-800")  # spades color
-      assert String.contains?(classes, "bg-red-50")      # red deck
+      # spades color
+      assert String.contains?(classes, "text-gray-800")
+      # red deck
+      assert String.contains?(classes, "bg-red-50")
     end
 
     test "dom_id/1 generates DOM-safe identifier", %{card: card} do

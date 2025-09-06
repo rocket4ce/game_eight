@@ -13,12 +13,13 @@ defmodule GameEight.Game.EngineCardDealingTest do
       user2 = user_fixture()
 
       # Create room
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 6,
-        creator_id: user1.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 6,
+          creator_id: user1.id,
+          type: "public"
+        })
 
       # Add users to room
       {:ok, _} = Game.join_room(room, user1)
@@ -40,19 +41,25 @@ defmodule GameEight.Game.EngineCardDealingTest do
       assert game_state.status == "playing"
 
       # Verify that both players have 8 cards
-      player_states = Repo.all(PlayerGameState) |> Enum.filter(&(&1.game_state_id == game_state.id))
+      player_states =
+        Repo.all(PlayerGameState) |> Enum.filter(&(&1.game_state_id == game_state.id))
+
       assert length(player_states) == 2
 
       for player_state <- player_states do
         # Reload to get updated hand_cards
         player_state = Repo.reload(player_state)
         hand_cards = Map.get(player_state.hand_cards, "cards", [])
-        assert length(hand_cards) == 8, "Player #{player_state.user_id} should have 8 cards, got #{length(hand_cards)}"
+
+        assert length(hand_cards) == 8,
+               "Player #{player_state.user_id} should have 8 cards, got #{length(hand_cards)}"
       end
 
       # Verify deck has remaining cards (104 total - 16 dealt = 88 remaining)
       deck_cards = Map.get(game_state.deck, "cards", [])
-      assert length(deck_cards) == 88, "Deck should have 88 cards remaining, got #{length(deck_cards)}"
+
+      assert length(deck_cards) == 88,
+             "Deck should have 88 cards remaining, got #{length(deck_cards)}"
     end
 
     test "turn order is determined by highest dice roll" do
@@ -62,12 +69,13 @@ defmodule GameEight.Game.EngineCardDealingTest do
       user3 = user_fixture()
 
       # Create room
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 6,
-        creator_id: user1.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 6,
+          creator_id: user1.id,
+          type: "public"
+        })
 
       # Add users to room
       {:ok, _} = Game.join_room(room, user1)

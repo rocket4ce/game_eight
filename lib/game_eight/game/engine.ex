@@ -47,7 +47,6 @@ defmodule GameEight.Game.Engine do
          {:ok, player_state} <- find_player_state(game_state, user_id),
          {:ok, _updated_player} <- update_dice_roll(player_state, dice_value),
          {:ok, updated_game} <- update_dice_results(game_state, user_id, dice_value) do
-
       if all_players_rolled?(updated_game) do
         start_game_play(updated_game)
       else
@@ -74,19 +73,31 @@ defmodule GameEight.Game.Engine do
   Processes a player's move during their turn.
   Validates the move and updates game state accordingly.
   """
-  def play_cards(game_state_id, user_id, cards_to_play, combination_type, target_combination \\ nil) do
+  def play_cards(
+        game_state_id,
+        user_id,
+        cards_to_play,
+        combination_type,
+        target_combination \\ nil
+      ) do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          :ok <- validate_player_turn(game_state, user_id),
          :ok <- validate_move_limits_with_cards(game_state, length(cards_to_play)),
          {:ok, player_state} <- find_player_state(game_state, user_id),
          {:ok, hand_cards} <- get_player_hand_cards(player_state),
          :ok <- validate_cards_in_hand(hand_cards, cards_to_play),
-         :ok <- validate_combination(cards_to_play, combination_type, game_state, target_combination),
+         :ok <-
+           validate_combination(cards_to_play, combination_type, game_state, target_combination),
          {:ok, updated_player} <- remove_cards_from_hand(player_state, cards_to_play),
-         {:ok, updated_game} <- update_table_combinations(game_state, cards_to_play, combination_type, target_combination),
+         {:ok, updated_game} <-
+           update_table_combinations(
+             game_state,
+             cards_to_play,
+             combination_type,
+             target_combination
+           ),
          {:ok, final_game} <- update_move_counts_with_cards(updated_game, length(cards_to_play)),
          {:ok, final_player} <- maybe_activate_player(updated_player) do
-
       # Check win condition
       if PlayerGameState.has_won?(final_player) do
         finish_game(final_game, user_id)
@@ -102,7 +113,14 @@ defmodule GameEight.Game.Engine do
   This function allows players to take cards from table combinations and combine them
   with cards from their hand to create new combinations or add to existing ones.
   """
-  def play_mixed_cards(game_state_id, user_id, hand_cards, table_card_data, combination_type, target_combination \\ nil) do
+  def play_mixed_cards(
+        game_state_id,
+        user_id,
+        hand_cards,
+        table_card_data,
+        combination_type,
+        target_combination \\ nil
+      ) do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          :ok <- validate_player_turn(game_state, user_id),
          :ok <- validate_move_limits_for_mixed_play(game_state, length(hand_cards)),
@@ -114,10 +132,15 @@ defmodule GameEight.Game.Engine do
          :ok <- validate_combination(all_cards, combination_type, game_state, target_combination),
          {:ok, updated_player} <- remove_cards_from_hand(player_state, hand_cards),
          {:ok, updated_game} <- remove_cards_from_table_combinations(game_state, table_card_data),
-         {:ok, final_game} <- update_table_combinations(updated_game, all_cards, combination_type, target_combination),
+         {:ok, final_game} <-
+           update_table_combinations(
+             updated_game,
+             all_cards,
+             combination_type,
+             target_combination
+           ),
          {:ok, final_game} <- update_move_counts_for_mixed_play(final_game, length(hand_cards)),
          {:ok, final_player} <- maybe_activate_player(updated_player) do
-
       # Check win condition
       if PlayerGameState.has_won?(final_player) do
         finish_game(final_game, user_id)
@@ -138,7 +161,6 @@ defmodule GameEight.Game.Engine do
          {:ok, drawn_card, remaining_deck} <- draw_from_deck(deck_cards),
          {:ok, _updated_player} <- add_card_to_hand(player_state, drawn_card),
          {:ok, updated_game} <- update_deck(game_state, remaining_deck) do
-
       # After drawing, player must end turn
       end_turn(updated_game)
     end
@@ -166,6 +188,40 @@ defmodule GameEight.Game.Engine do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          :ok <- validate_player_turn(game_state, user_id) do
       end_turn(game_state)
+    end
+  end
+
+  @doc """
+  Moves a card from one table combination to another table combination.
+  This counts as one movement and decrements the player's remaining movements.
+  """
+  def move_card_between_combinations(
+        game_state_id,
+        user_id,
+        source_combination,
+        target_combination,
+        card_to_move
+      ) do
+    with {:ok, game_state} <- get_game_state_with_players(game_state_id),
+         :ok <- validate_game_playing(game_state),
+         :ok <- validate_player_turn(game_state, user_id),
+         {:ok, player_state} <- find_player_state(game_state, user_id),
+         :ok <- validate_player_on_state(player_state),
+         :ok <- validate_movements_remaining(player_state),
+         :ok <- validate_combination_exists(game_state, source_combination),
+         :ok <- validate_combination_exists(game_state, target_combination),
+         :ok <- validate_card_in_combination(game_state, source_combination, card_to_move),
+         :ok <-
+           validate_card_can_be_moved(
+             game_state,
+             source_combination,
+             target_combination,
+             card_to_move
+           ),
+         {:ok, updated_game_state} <-
+           perform_card_move(game_state, source_combination, target_combination, card_to_move),
+         {:ok, updated_player} <- decrement_movements(player_state) do
+      {:ok, updated_game_state, updated_player}
     end
   end
 
@@ -215,6 +271,7 @@ defmodule GameEight.Game.Engine do
       end)
 
     {count, _} = Repo.insert_all(PlayerGameState, player_states)
+
     if count == length(users) do
       {:ok, player_states}
     else
@@ -277,7 +334,8 @@ defmodule GameEight.Game.Engine do
         {player.user_id, dice_value, player.player_index}
       end)
       |> Enum.sort_by(fn {_user_id, dice_value, player_index} ->
-        {-dice_value, player_index}  # Highest dice first, then by player_index for ties
+        # Highest dice first, then by player_index for ties
+        {-dice_value, player_index}
       end)
       |> Enum.map(fn {user_id, _dice, _index} -> user_id end)
 
@@ -384,18 +442,23 @@ defmodule GameEight.Game.Engine do
           true -> {:error, :invalid_addition}
         end
 
-      {:error, reason} -> {:error, reason}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   defp get_target_combination_cards(game_state, target_combination_name) do
     case Map.get(game_state.table_combinations, target_combination_name) do
-      nil -> {:error, :combination_not_found}
+      nil ->
+        {:error, :combination_not_found}
+
       cards when is_list(cards) ->
         # Convert from serialized maps to Card structs
         card_structs = Enum.map(cards, &map_to_card/1)
         {:ok, card_structs}
-      _ -> {:error, :invalid_combination_format}
+
+      _ ->
+        {:error, :invalid_combination_format}
     end
   end
 
@@ -407,6 +470,7 @@ defmodule GameEight.Game.Engine do
       deck: String.to_atom(deck)
     }
   end
+
   defp map_to_card(%{position: pos, card: card, type: type, deck: deck}) do
     %Card{position: pos, card: card, type: type, deck: deck}
   end
@@ -423,11 +487,17 @@ defmodule GameEight.Game.Engine do
   defp update_table_combinations(game_state, cards, combination_type, target_combination) do
     current_combinations = game_state.table_combinations
 
-    updated_combinations = case combination_type do
-      "trio" -> add_new_combination(current_combinations, cards, "trio")
-      "sequence" -> add_new_combination(current_combinations, cards, "sequence")
-      "add_to_combination" -> add_to_existing_combination(current_combinations, cards, target_combination)
-    end
+    updated_combinations =
+      case combination_type do
+        "trio" ->
+          add_new_combination(current_combinations, cards, "trio")
+
+        "sequence" ->
+          add_new_combination(current_combinations, cards, "sequence")
+
+        "add_to_combination" ->
+          add_to_existing_combination(current_combinations, cards, target_combination)
+      end
 
     GameState.game_data_changeset(game_state, %{table_combinations: updated_combinations})
     |> Repo.update()
@@ -439,10 +509,11 @@ defmodule GameEight.Game.Engine do
     new_key = generate_combination_key(type, existing_keys)
 
     # Apply automatic reordering for any valid sequence
-    processed_cards = case type do
-      "sequence" -> Card.reorder_sequence(cards)
-      _ -> cards
-    end
+    processed_cards =
+      case type do
+        "sequence" -> Card.reorder_sequence(cards)
+        _ -> cards
+      end
 
     card_maps = Enum.map(processed_cards, &Map.from_struct/1)
     Map.put(combinations, new_key, card_maps)
@@ -450,7 +521,10 @@ defmodule GameEight.Game.Engine do
 
   defp add_to_existing_combination(combinations, cards, target_key) do
     case Map.get(combinations, target_key) do
-      nil -> combinations  # Target combination doesn't exist
+      # Target combination doesn't exist
+      nil ->
+        combinations
+
       existing_cards ->
         # Convert existing cards back to structs to check if it's a sequence
         existing_structs = Enum.map(existing_cards, &map_to_card/1)
@@ -525,8 +599,10 @@ defmodule GameEight.Game.Engine do
   def reorder_hand_cards(game_state_id, user_id, from_position, to_position) do
     with {:ok, game_state} <- get_game_state_with_players(game_state_id),
          {:ok, player_state} <- find_player_state(game_state, user_id),
-         {:ok, reordered_hand_structs} <- reorder_hand_structs(player_state, from_position, to_position),
-         {:ok, _updated_player} <- update_player_hand_from_structs(player_state, reordered_hand_structs),
+         {:ok, reordered_hand_structs} <-
+           reorder_hand_structs(player_state, from_position, to_position),
+         {:ok, _updated_player} <-
+           update_player_hand_from_structs(player_state, reordered_hand_structs),
          {:ok, updated_game_state} <- get_game_state_with_players(game_state_id) do
       {:ok, updated_game_state}
     end
@@ -550,7 +626,8 @@ defmodule GameEight.Game.Engine do
          :ok <- validate_can_take_card(combination_cards, card_to_take, combination_name),
          {:ok, player_state} <- find_player_state(game_state, user_id),
          {:ok, _updated_player} <- add_card_to_player_hand(player_state, card_to_take),
-         {:ok, updated_game_state} <- remove_card_from_combination(game_state, combination_name, card_to_take),
+         {:ok, updated_game_state} <-
+           remove_card_from_combination(game_state, combination_name, card_to_take),
          {:ok, final_game_state} <- get_game_state_with_players(updated_game_state.id) do
       {:ok, final_game_state}
     end
@@ -603,17 +680,22 @@ defmodule GameEight.Game.Engine do
   # Helper functions for taking table cards
   defp get_combination_cards(game_state, combination_name) do
     case Map.get(game_state.table_combinations, combination_name) do
-      nil -> {:error, :combination_not_found}
+      nil ->
+        {:error, :combination_not_found}
+
       cards when is_list(cards) ->
         # Convert maps to structs
         struct_cards = Enum.map(cards, &map_to_card/1)
         {:ok, struct_cards}
-      _ -> {:error, :invalid_combination_format}
+
+      _ ->
+        {:error, :invalid_combination_format}
     end
   end
 
   defp find_card_in_combination(combination_cards, card_position) do
-    position = if is_binary(card_position), do: String.to_integer(card_position), else: card_position
+    position =
+      if is_binary(card_position), do: String.to_integer(card_position), else: card_position
 
     case Enum.find(combination_cards, &(get_card_position(&1) == position)) do
       nil -> {:error, :card_not_found_in_combination}
@@ -623,9 +705,11 @@ defmodule GameEight.Game.Engine do
 
   defp validate_can_take_card(combination_cards, card_to_take, combination_name) do
     card_to_take_position = get_card_position(card_to_take)
-    remaining_cards = Enum.reject(combination_cards, fn card ->
-      get_card_position(card) == card_to_take_position
-    end)
+
+    remaining_cards =
+      Enum.reject(combination_cards, fn card ->
+        get_card_position(card) == card_to_take_position
+      end)
 
     # Must have at least 3 cards remaining
     if length(remaining_cards) < 3 do
@@ -659,7 +743,10 @@ defmodule GameEight.Game.Engine do
         card_to_remove_position = get_card_position(card_to_remove)
 
         # Find the index of the first card that matches the position
-        case Enum.find_index(combination_cards, &(get_card_position(&1) == card_to_remove_position)) do
+        case Enum.find_index(
+               combination_cards,
+               &(get_card_position(&1) == card_to_remove_position)
+             ) do
           nil ->
             {:error, :card_not_found_in_combination}
 
@@ -685,7 +772,9 @@ defmodule GameEight.Game.Engine do
               :ok -> {:ok, card}
               error -> error
             end
-          error -> error
+
+          error ->
+            error
         end
       end)
 
@@ -694,13 +783,16 @@ defmodule GameEight.Game.Engine do
       nil ->
         table_cards = Enum.map(results, fn {:ok, card} -> card end)
         {:ok, table_cards}
-      {:error, reason} -> {:error, reason}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   defp remove_cards_from_table_combinations(game_state, table_card_data) do
     # Remove each card from its respective table combination
-    Enum.reduce_while(table_card_data, {:ok, game_state}, fn {combination_name, card}, {:ok, current_game_state} ->
+    Enum.reduce_while(table_card_data, {:ok, game_state}, fn {combination_name, card},
+                                                             {:ok, current_game_state} ->
       case remove_card_from_combination(current_game_state, combination_name, card) do
         {:ok, updated_game_state} -> {:cont, {:ok, updated_game_state}}
         {:error, reason} -> {:halt, {:error, reason}}
@@ -713,6 +805,112 @@ defmodule GameEight.Game.Engine do
       :ok
     else
       {:error, :game_not_in_playing_state}
+    end
+  end
+
+  # Helper functions for card movement between combinations
+  defp validate_player_on_state(player_state) do
+    if player_state.status == "on" do
+      :ok
+    else
+      {:error, :player_not_on}
+    end
+  end
+
+  defp validate_movements_remaining(player_state) do
+    if player_state.movements_remaining > 0 do
+      :ok
+    else
+      {:error, :no_movements_remaining}
+    end
+  end
+
+  defp validate_combination_exists(game_state, combination_name) do
+    case Map.get(game_state.table_combinations, combination_name) do
+      nil -> {:error, :combination_not_found}
+      _cards -> :ok
+    end
+  end
+
+  defp validate_card_in_combination(game_state, combination_name, card) do
+    case Map.get(game_state.table_combinations, combination_name) do
+      nil ->
+        {:error, :combination_not_found}
+
+      combination_cards ->
+        card_position = get_card_position(card)
+        card_exists = Enum.any?(combination_cards, &(get_card_position(&1) == card_position))
+
+        if card_exists do
+          :ok
+        else
+          {:error, :card_not_found_in_combination}
+        end
+    end
+  end
+
+  defp validate_card_can_be_moved(game_state, source_combination, target_combination, card) do
+    with {:ok, source_cards} <- get_combination_cards(game_state, source_combination),
+         {:ok, target_cards} <- get_combination_cards(game_state, target_combination) do
+      # Remove the card from source and check if it's still valid
+      card_position = get_card_position(card)
+      source_without_card = Enum.reject(source_cards, &(get_card_position(&1) == card_position))
+
+      # Add the card to target and check if it's still valid  
+      target_with_card = target_cards ++ [card]
+
+      cond do
+        length(source_without_card) < 3 ->
+          {:error, :source_would_be_invalid}
+
+        not valid_combination?(target_with_card) ->
+          {:error, :target_would_be_invalid}
+
+        true ->
+          :ok
+      end
+    end
+  end
+
+  defp perform_card_move(game_state, source_combination, target_combination, card) do
+    with {:ok, updated_game_state} <-
+           remove_card_from_combination(game_state, source_combination, card),
+         {:ok, final_game_state} <-
+           add_card_to_combination(updated_game_state, target_combination, card) do
+      {:ok, final_game_state}
+    end
+  end
+
+  defp add_card_to_combination(game_state, combination_name, card) do
+    current_combinations = game_state.table_combinations
+
+    case Map.get(current_combinations, combination_name) do
+      nil ->
+        {:error, :combination_not_found}
+
+      combination_cards ->
+        updated_cards = combination_cards ++ [card]
+        updated_combinations = Map.put(current_combinations, combination_name, updated_cards)
+
+        GameState.changeset(game_state, %{table_combinations: updated_combinations})
+        |> Repo.update()
+    end
+  end
+
+  defp decrement_movements(player_state) do
+    new_movements = player_state.movements_remaining - 1
+
+    PlayerGameState.changeset(player_state, %{movements_remaining: new_movements})
+    |> Repo.update()
+  end
+
+  defp valid_combination?(cards) do
+    case length(cards) do
+      n when n < 3 ->
+        false
+
+      _ ->
+        Card.valid_trio?(cards) or Card.valid_sequence?(cards)
     end
   end
 end

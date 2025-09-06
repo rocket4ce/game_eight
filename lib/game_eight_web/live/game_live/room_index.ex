@@ -17,7 +17,7 @@ defmodule GameEightWeb.GameLive.RoomIndex do
   defp apply_action(socket, :index, _params) do
     current_user = socket.assigns.current_scope.user
     user_rooms = Game.get_user_active_rooms(current_user.id)
-    
+
     socket
     |> assign(:page_title, "Mis Salas")
     |> assign(:rooms_empty?, user_rooms == [])
@@ -46,7 +46,7 @@ defmodule GameEightWeb.GameLive.RoomIndex do
       {:ok, room} ->
         # Unir automáticamente al creador
         {:ok, _room_user} = Game.join_room(room, current_user)
-        
+
         # Notificar a todos los usuarios sobre la nueva sala
         if room.type == "public" do
           Phoenix.PubSub.broadcast(GameEight.PubSub, "rooms", {:room_created, room})
@@ -72,11 +72,11 @@ defmodule GameEightWeb.GameLive.RoomIndex do
       case Game.delete_room(room) do
         {:ok, _} ->
           Phoenix.PubSub.broadcast(GameEight.PubSub, "rooms", {:room_deleted, room})
-          
+
           # Reload rooms to check if empty
           current_user = socket.assigns.current_scope.user
           remaining_rooms = Game.get_user_active_rooms(current_user.id)
-          
+
           {:noreply,
            socket
            |> put_flash(:info, "Sala eliminada exitosamente")
@@ -100,7 +100,7 @@ defmodule GameEightWeb.GameLive.RoomIndex do
       {:ok, _} ->
         # Reload rooms to check if empty
         remaining_rooms = Game.get_user_active_rooms(current_user.id)
-        
+
         {:noreply,
          socket
          |> put_flash(:info, "Has salido de la sala")
@@ -122,7 +122,7 @@ defmodule GameEightWeb.GameLive.RoomIndex do
       case Game.start_room(room) do
         {:ok, started_room} ->
           Phoenix.PubSub.broadcast(GameEight.PubSub, "rooms", {:room_updated, started_room})
-          
+
           {:noreply,
            socket
            |> put_flash(:info, "¡Partida iniciada!")

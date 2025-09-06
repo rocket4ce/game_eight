@@ -11,11 +11,11 @@ defmodule GameEight.Game.Card do
   defstruct [:position, :card, :type, :deck]
 
   @type t :: %__MODULE__{
-    position: non_neg_integer(),
-    card: String.t(),
-    type: atom(),
-    deck: atom()
-  }
+          position: non_neg_integer(),
+          card: String.t(),
+          type: atom(),
+          deck: atom()
+        }
 
   # Card values in order for sequence validation
   @card_values ~w(Ace 2 3 4 5 6 7 8 9 10 Jack Queen King)
@@ -63,7 +63,7 @@ defmodule GameEight.Game.Card do
     for {suit, suit_index} <- Enum.with_index(@suits),
         {card, card_index} <- Enum.with_index(@card_values) do
       %__MODULE__{
-        position: start_position + (suit_index * 13) + card_index,
+        position: start_position + suit_index * 13 + card_index,
         card: card,
         type: suit,
         deck: deck_color
@@ -119,7 +119,9 @@ defmodule GameEight.Game.Card do
       hands =
         cards_to_deal
         |> Enum.with_index()
-        |> Enum.group_by(fn {_card, index} -> rem(index, num_players) end, fn {card, _index} -> card end)
+        |> Enum.group_by(fn {_card, index} -> rem(index, num_players) end, fn {card, _index} ->
+          card
+        end)
         |> Map.values()
 
       {hands, remaining_deck}
@@ -141,6 +143,7 @@ defmodule GameEight.Game.Card do
   """
   def card_value(card) do
     card_str = get_card_value(card)
+
     case card_str do
       "Ace" -> 1
       "Jack" -> 11
@@ -299,23 +302,26 @@ defmodule GameEight.Game.Card do
   Returns CSS classes for styling a card based on its properties.
   """
   def css_classes(%__MODULE__{type: type, deck: deck, card: card}) do
-    suit_color = case type do
-      :spades -> "text-gray-800"
-      :clubs -> "text-gray-800"
-      :hearts -> "text-red-600"
-      :diamonds -> "text-red-600"
-    end
+    suit_color =
+      case type do
+        :spades -> "text-gray-800"
+        :clubs -> "text-gray-800"
+        :hearts -> "text-red-600"
+        :diamonds -> "text-red-600"
+      end
 
-    deck_bg = case deck do
-      :red -> "bg-red-50 border-red-200"
-      :blue -> "bg-blue-50 border-blue-200"
-    end
+    deck_bg =
+      case deck do
+        :red -> "bg-red-50 border-red-200"
+        :blue -> "bg-blue-50 border-blue-200"
+      end
 
-    card_type = case card do
-      face when face in ["Jack", "Queen", "King"] -> "face-card"
-      "Ace" -> "ace-card"
-      _ -> "number-card"
-    end
+    card_type =
+      case card do
+        face when face in ["Jack", "Queen", "King"] -> "face-card"
+        "Ace" -> "ace-card"
+        _ -> "number-card"
+      end
 
     "card draggable #{suit_color} #{deck_bg} #{card_type}"
   end
@@ -403,6 +409,7 @@ defmodule GameEight.Game.Card do
   # Gets card value for natural ordering (A=1, 2=2, ..., J=11, Q=12, K=13)
   defp card_value_for_natural_order(card) do
     card_str = get_card_value(card)
+
     case card_str do
       "Ace" -> 1
       "Jack" -> 11
@@ -450,6 +457,7 @@ defmodule GameEight.Game.Card do
   # Checks if a list of numbers is consecutive
   defp consecutive?([]), do: false
   defp consecutive?([_single]), do: false
+
   defp consecutive?(values) do
     values
     |> Enum.with_index()

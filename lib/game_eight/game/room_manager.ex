@@ -8,7 +8,8 @@ defmodule GameEight.Game.RoomManager do
   require Logger
   alias GameEight.Game
 
-  @check_interval :timer.minutes(1)  # Revisar cada minuto
+  # Revisar cada minuto
+  @check_interval :timer.minutes(1)
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -33,17 +34,17 @@ defmodule GameEight.Game.RoomManager do
 
   defp check_and_start_rooms do
     rooms_to_start = Game.get_rooms_to_auto_start()
-    
+
     Enum.each(rooms_to_start, fn room ->
       case Game.start_room(room) do
         {:ok, started_room} ->
           Logger.info("Auto-started room #{started_room.id} (#{started_room.name})")
-          
+
         {:error, reason} ->
           Logger.warning("Failed to auto-start room #{room.id}: #{inspect(reason)}")
       end
     end)
-    
+
     if length(rooms_to_start) > 0 do
       Logger.info("Auto-started #{length(rooms_to_start)} rooms")
     end

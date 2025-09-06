@@ -5,15 +5,19 @@ defmodule GameEight.Repo.Migrations.CreateRooms do
     create table(:rooms, primary_key: false) do
       add :id, :binary_id, primary_key: true
       add :name, :string
-      add :type, :string, null: false # "public" or "private"
-      add :status, :string, null: false, default: "pending" # "pending", "started", "finished"
-      add :access_key, :string # Para partidas privadas
+      # "public" or "private"
+      add :type, :string, null: false
+      # "pending", "started", "finished"
+      add :status, :string, null: false, default: "pending"
+      # Para partidas privadas
+      add :access_key, :string
       add :max_players, :integer, null: false, default: 6
       add :min_players, :integer, null: false, default: 2
       add :creator_id, references(:users, on_delete: :delete_all, type: :binary_id), null: false
       add :started_at, :utc_datetime
       add :finished_at, :utc_datetime
-      add :timeout_minutes, :integer, default: 5 # Tiempo límite para unirse
+      # Tiempo límite para unirse
+      add :timeout_minutes, :integer, default: 5
 
       timestamps(type: :utc_datetime)
     end

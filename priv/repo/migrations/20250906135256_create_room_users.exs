@@ -6,9 +6,11 @@ defmodule GameEight.Repo.Migrations.CreateRoomUsers do
       add :id, :binary_id, primary_key: true
       add :room_id, references(:rooms, on_delete: :delete_all, type: :binary_id), null: false
       add :user_id, references(:users, on_delete: :delete_all, type: :binary_id), null: false
-      add :position, :integer, null: false # Posición del jugador en la mesa (0-5)
+      # Posición del jugador en la mesa (0-5)
+      add :position, :integer, null: false
       add :joined_at, :utc_datetime, null: false
-      add :status, :string, default: "active" # "active", "disconnected", "left"
+      # "active", "disconnected", "left"
+      add :status, :string, default: "active"
 
       timestamps(type: :utc_datetime)
     end

@@ -114,7 +114,8 @@ defmodule GameEight.Game do
   @doc """
   Updates room status.
   """
-  def update_room_status(%Room{} = room, status) when status in ["pending", "started", "finished"] do
+  def update_room_status(%Room{} = room, status)
+      when status in ["pending", "started", "finished"] do
     room
     |> Room.status_changeset(%{status: status})
     |> Repo.update()
@@ -268,11 +269,13 @@ defmodule GameEight.Game do
             case GameEight.Game.Engine.initialize_game(room.id) do
               {:ok, _game_state} ->
                 {:ok, started_room}
+
               {:error, reason} ->
                 # Rollback room status if game initialization fails
                 update_room_status(started_room, "pending")
                 {:error, reason}
             end
+
           error ->
             error
         end
@@ -339,7 +342,7 @@ defmodule GameEight.Game do
 
     %{
       total_players: length(room_users),
-      active_players: Enum.count(room_users, & &1.status == "active"),
+      active_players: Enum.count(room_users, &(&1.status == "active")),
       positions_filled: Enum.map(room_users, & &1.position) |> Enum.sort(),
       can_start: Room.can_start?(room |> Repo.preload(:room_users)),
       is_full: Room.is_full?(room |> Repo.preload(:room_users))
@@ -365,7 +368,8 @@ defmodule GameEight.Game do
         elapsed_hours = DateTime.diff(DateTime.utc_now(), room.inserted_at, :hour)
         elapsed_hours >= hours_threshold
 
-      _ -> false
+      _ ->
+        false
     end
   end
 
@@ -403,7 +407,7 @@ defmodule GameEight.Game do
   """
   def get_game_state_with_players(game_state_id) do
     case Repo.get(GameState, game_state_id)
-         |> Repo.preload([player_game_states: :user]) do
+         |> Repo.preload(player_game_states: :user) do
       nil -> {:error, :game_not_found}
       game_state -> {:ok, game_state}
     end

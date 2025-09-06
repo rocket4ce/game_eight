@@ -34,7 +34,8 @@ export const CardDragSource = {
         source: this.el.dataset.source, // 'hand' or 'table'
         combinationName: this.el.dataset.combinationName || null,
         cardValue: this.el.dataset.cardValue,
-        cardType: this.el.dataset.cardType
+        cardType: this.el.dataset.cardType,
+        deck: this.el.dataset.deck || null
       }
 
       e.dataTransfer.setData('application/json', JSON.stringify(cardData))
@@ -102,7 +103,7 @@ export const CardDragSource = {
     }
 
     if (dropZoneType === 'add-to-combination' && cardData.source === 'hand') {
-      console.log('Checking add-to-combination validation')
+      console.log('Checking add-to-combination validation for hand card')
       // Check if it's current player's turn using data attribute
       const isCurrentTurn = zone.dataset.isCurrentTurn === 'true'
       console.log('isCurrentTurn value:', zone.dataset.isCurrentTurn, 'parsed as:', isCurrentTurn)
@@ -114,6 +115,36 @@ export const CardDragSource = {
       console.log('Current player turn confirmed, allowing drop')
       // Always allow adding cards from hand to existing combinations
       // Validation will be handled server-side
+      return true
+    }
+
+    if (dropZoneType === 'add-to-combination' && cardData.source === 'table') {
+      console.log('Checking move between combinations validation')
+      // Check if it's current player's turn
+      const isCurrentTurn = zone.dataset.isCurrentTurn === 'true'
+      if (!isCurrentTurn) {
+        console.log('Not current player turn')
+        return false
+      }
+
+      // Check that source and target are different combinations
+      const targetCombination = zone.dataset.combinationName
+      if (cardData.combinationName === targetCombination) {
+        console.log('Cannot move card to same combination')
+        return false
+      }
+
+      // Check that source combination has more than 3 cards
+      const combinationElement = document.querySelector(`[data-combination-name="${cardData.combinationName}"]`)
+      if (!combinationElement) return false
+      
+      const cardsInCombination = combinationElement.querySelectorAll('.game-card').length
+      if (cardsInCombination <= 3) {
+        console.log('Cannot move card: would leave less than 3 cards in source')
+        return false
+      }
+
+      console.log('Move between combinations validation passed')
       return true
     }
 
@@ -187,7 +218,8 @@ export const CardDragSource = {
           source: this.el.dataset.source,
           combinationName: this.el.dataset.combinationName || null,
           cardValue: this.el.dataset.cardValue,
-          cardType: this.el.dataset.cardType
+          cardType: this.el.dataset.cardType,
+          deck: this.el.dataset.deck || null
         }
 
         const dropData = {
@@ -227,6 +259,13 @@ export const CardDragSource = {
       this.pushEvent('add_cards_to_combination', {
         combination_name: dropData.combinationName,
         card_positions: [cardData.position]
+      })
+    } else if (dropData.target === 'add-to-combination' && cardData.source === 'table') {
+      console.log('Sending move_card_between_combinations event')
+      this.pushEvent('move_card_between_combinations', {
+        source_combination: cardData.combinationName,
+        target_combination: dropData.combinationName,
+        card_id: `${cardData.cardValue}_${cardData.cardType}_${cardData.deck}`
       })
     } else {
       console.log('No matching drop handler for:', { target: dropData.target, source: cardData.source })
@@ -329,7 +368,7 @@ export const CardDropZone = {
 
     // For adding cards to combinations: only allow hand cards to be dropped in combinations
     if (dropZoneType === 'add-to-combination' && cardData.source === 'hand') {
-      console.log('CardDropZone isValidDrop: checking add-to-combination')
+      console.log('CardDropZone isValidDrop: checking add-to-combination for hand card')
       // Check if it's the current player's turn using data attribute
       const isCurrentTurn = this.el.dataset.isCurrentTurn === 'true'
       console.log('CardDropZone isCurrentTurn:', this.el.dataset.isCurrentTurn, 'parsed as:', isCurrentTurn)
@@ -340,6 +379,37 @@ export const CardDropZone = {
 
       console.log('CardDropZone: Current turn confirmed, allowing drop')
       // Allow the drop - server will validate if the combination is valid
+      return true
+    }
+
+    // For moving cards between combinations: only allow table cards to be dropped in different combinations
+    if (dropZoneType === 'add-to-combination' && cardData.source === 'table') {
+      console.log('CardDropZone isValidDrop: checking move between combinations')
+      // Check if it's the current player's turn
+      const isCurrentTurn = this.el.dataset.isCurrentTurn === 'true'
+      if (!isCurrentTurn) {
+        console.log('CardDropZone: Not current turn, rejecting move')
+        return false
+      }
+
+      // Check that source and target combinations are different
+      const targetCombination = this.el.dataset.combinationName
+      if (cardData.combinationName === targetCombination) {
+        console.log('CardDropZone: Cannot move card to same combination')
+        return false
+      }
+
+      // Check that source combination has more than 3 cards
+      const sourceCombinationElement = document.querySelector(`[data-combination-name="${cardData.combinationName}"]`)
+      if (!sourceCombinationElement) return false
+      
+      const cardsInSource = sourceCombinationElement.querySelectorAll('.game-card').length
+      if (cardsInSource <= 3) {
+        console.log('CardDropZone: Cannot move card, source would have less than 3 cards')
+        return false
+      }
+
+      console.log('CardDropZone: Move between combinations allowed')
       return true
     }
 

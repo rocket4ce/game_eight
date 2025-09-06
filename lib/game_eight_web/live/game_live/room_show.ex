@@ -34,8 +34,13 @@ defmodule GameEightWeb.GameLive.RoomShow do
     case Game.join_room(room, current_user) do
       {:ok, _room_user} ->
         updated_room = Game.get_room!(room.id)
-        Phoenix.PubSub.broadcast(GameEight.PubSub, "room:#{room.id}", {:room_updated, updated_room})
-        
+
+        Phoenix.PubSub.broadcast(
+          GameEight.PubSub,
+          "room:#{room.id}",
+          {:room_updated, updated_room}
+        )
+
         {:noreply,
          socket
          |> put_flash(:info, "Te has unido a la sala exitosamente")
@@ -65,8 +70,13 @@ defmodule GameEightWeb.GameLive.RoomShow do
     case Game.leave_room(room, current_user) do
       {:ok, _} ->
         updated_room = Game.get_room!(room.id)
-        Phoenix.PubSub.broadcast(GameEight.PubSub, "room:#{room.id}", {:room_updated, updated_room})
-        
+
+        Phoenix.PubSub.broadcast(
+          GameEight.PubSub,
+          "room:#{room.id}",
+          {:room_updated, updated_room}
+        )
+
         {:noreply,
          socket
          |> put_flash(:info, "Has salido de la sala")
@@ -85,8 +95,12 @@ defmodule GameEightWeb.GameLive.RoomShow do
     if room.creator_id == current_user.id do
       case Game.start_room(room) do
         {:ok, started_room} ->
-          Phoenix.PubSub.broadcast(GameEight.PubSub, "room:#{room.id}", {:room_started, started_room})
-          
+          Phoenix.PubSub.broadcast(
+            GameEight.PubSub,
+            "room:#{room.id}",
+            {:room_started, started_room}
+          )
+
           {:noreply,
            socket
            |> put_flash(:info, "¡Partida iniciada!")
@@ -94,7 +108,12 @@ defmodule GameEightWeb.GameLive.RoomShow do
            |> assign(:room_stats, Game.get_room_stats(room.id))}
 
         {:error, :insufficient_players} ->
-          {:noreply, put_flash(socket, :error, "Se necesitan al menos #{room.min_players} jugadores para iniciar")}
+          {:noreply,
+           put_flash(
+             socket,
+             :error,
+             "Se necesitan al menos #{room.min_players} jugadores para iniciar"
+           )}
 
         {:error, _} ->
           {:noreply, put_flash(socket, :error, "No se pudo iniciar la partida")}
@@ -113,7 +132,7 @@ defmodule GameEightWeb.GameLive.RoomShow do
       case Game.delete_room(room) do
         {:ok, _} ->
           Phoenix.PubSub.broadcast(GameEight.PubSub, "rooms", {:room_deleted, room})
-          
+
           {:noreply,
            socket
            |> put_flash(:info, "Sala eliminada exitosamente")
@@ -129,7 +148,7 @@ defmodule GameEightWeb.GameLive.RoomShow do
 
   @impl true
   def handle_info({:room_updated, updated_room}, socket) do
-    {:noreply, 
+    {:noreply,
      socket
      |> assign(:room, updated_room)
      |> assign(:room_stats, Game.get_room_stats(updated_room.id))}
@@ -166,9 +185,9 @@ defmodule GameEightWeb.GameLive.RoomShow do
   end
 
   defp can_start_room?(room, user_id) do
-    is_room_creator?(room, user_id) && 
-    room.status == "pending" && 
-    Game.Room.can_start?(room)
+    is_room_creator?(room, user_id) &&
+      room.status == "pending" &&
+      Game.Room.can_start?(room)
   end
 
   defp user_position_in_room(room, user_id) do
@@ -188,7 +207,7 @@ defmodule GameEightWeb.GameLive.RoomShow do
   defp time_since_created(room) do
     now = DateTime.utc_now()
     diff_seconds = DateTime.diff(now, room.inserted_at, :second)
-    
+
     cond do
       diff_seconds < 60 -> "#{diff_seconds} segundos"
       diff_seconds < 3600 -> "#{div(diff_seconds, 60)} minutos"

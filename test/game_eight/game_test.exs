@@ -36,7 +36,7 @@ defmodule GameEight.GameTest do
 
       # Unir al creador a la sala
       {:ok, _room_user} = Game.join_room(room, user)
-      
+
       %{room | creator: user}
     end
 
@@ -85,7 +85,8 @@ defmodule GameEight.GameTest do
       assert {:ok, %RoomUser{} = room_user} = Game.join_room(room, user)
       assert room_user.room_id == room.id
       assert room_user.user_id == user.id
-      assert room_user.position == 1  # Creador está en posición 0
+      # Creador está en posición 0
+      assert room_user.position == 1
     end
 
     test "join_room/2 assigns correct positions" do
@@ -96,8 +97,10 @@ defmodule GameEight.GameTest do
       {:ok, room_user1} = Game.join_room(room, user1)
       {:ok, room_user2} = Game.join_room(room, user2)
 
-      assert room_user1.position == 1  # Creador en 0, primer usuario en 1
-      assert room_user2.position == 2  # Segundo usuario en 2
+      # Creador en 0, primer usuario en 1
+      assert room_user1.position == 1
+      # Segundo usuario en 2
+      assert room_user2.position == 2
     end
 
     test "join_room/2 prevents duplicate joins" do

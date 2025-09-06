@@ -17,12 +17,13 @@ defmodule GameEight.Game.MixedCardPlayTest do
       user2 = user_fixture()
 
       # Create room
-      {:ok, room} = Game.create_room(%{
-        name: "Test Room",
-        max_players: 6,
-        creator_id: user1.id,
-        type: "public"
-      })
+      {:ok, room} =
+        Game.create_room(%{
+          name: "Test Room",
+          max_players: 6,
+          creator_id: user1.id,
+          type: "public"
+        })
 
       # Add users to room
       {:ok, _} = Game.join_room(room, user1)
@@ -50,18 +51,24 @@ defmodule GameEight.Game.MixedCardPlayTest do
       }
     end
 
-    test "play_mixed_cards function exists and validates parameters", %{game_state: game_state, user1: user1} do
+    test "play_mixed_cards function exists and validates parameters", %{
+      game_state: game_state,
+      user1: user1
+    } do
       # This is a simple test to verify the function exists and basic parameter validation works
       # Since we can't easily create real game scenarios in unit tests, we'll just test
       # that the function rejects invalid input properly
 
-      result = Engine.play_mixed_cards(
-        game_state.id,
-        user1.id,
-        [], # empty hand cards
-        [], # empty table card data
-        "trio"
-      )
+      result =
+        Engine.play_mixed_cards(
+          game_state.id,
+          user1.id,
+          # empty hand cards
+          [],
+          # empty table card data
+          [],
+          "trio"
+        )
 
       # Should fail with some validation error (not crash)
       assert {:error, _reason} = result
@@ -71,13 +78,14 @@ defmodule GameEight.Game.MixedCardPlayTest do
       # Test with invalid game state ID
       invalid_uuid = "00000000-0000-0000-0000-000000000000"
 
-      result = Engine.play_mixed_cards(
-        invalid_uuid,
-        user1.id,
-        [],
-        [],
-        "trio"
-      )
+      result =
+        Engine.play_mixed_cards(
+          invalid_uuid,
+          user1.id,
+          [],
+          [],
+          "trio"
+        )
 
       # Should fail gracefully
       assert {:error, _reason} = result

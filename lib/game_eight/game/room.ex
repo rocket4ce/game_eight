@@ -30,7 +30,15 @@ defmodule GameEight.Game.Room do
   @doc false
   def changeset(room, attrs) do
     room
-    |> cast(attrs, [:name, :type, :access_key, :max_players, :min_players, :timeout_minutes, :creator_id])
+    |> cast(attrs, [
+      :name,
+      :type,
+      :access_key,
+      :max_players,
+      :min_players,
+      :timeout_minutes,
+      :creator_id
+    ])
     |> validate_required([:type, :creator_id])
     |> validate_inclusion(:type, @types)
     |> validate_inclusion(:status, @statuses)
@@ -105,13 +113,15 @@ defmodule GameEight.Game.Room do
     case room.room_users do
       %Ecto.Association.NotLoaded{} ->
         # Si no está cargada la asociación, consultar la base de datos
-        room_users_count = GameEight.Repo.one(
-          from ru in GameEight.Game.RoomUser,
-          where: ru.room_id == ^room.id,
-          select: count(ru.id)
-        )
+        room_users_count =
+          GameEight.Repo.one(
+            from ru in GameEight.Game.RoomUser,
+              where: ru.room_id == ^room.id,
+              select: count(ru.id)
+          )
+
         room_users_count >= room.max_players
-      
+
       room_users when is_list(room_users) ->
         length(room_users) >= room.max_players
     end
@@ -128,21 +138,22 @@ defmodule GameEight.Game.Room do
   Obtiene la siguiente posición disponible en la sala
   """
   def next_position(room) do
-    used_positions = case room.room_users do
-      %Ecto.Association.NotLoaded{} ->
-        # Si no está cargada la asociación, consultar la base de datos
-        GameEight.Repo.all(
-          from ru in GameEight.Game.RoomUser,
-          where: ru.room_id == ^room.id,
-          select: ru.position
-        )
-      
-      room_users when is_list(room_users) ->
-        Enum.map(room_users, & &1.position)
-    end
-    
+    used_positions =
+      case room.room_users do
+        %Ecto.Association.NotLoaded{} ->
+          # Si no está cargada la asociación, consultar la base de datos
+          GameEight.Repo.all(
+            from ru in GameEight.Game.RoomUser,
+              where: ru.room_id == ^room.id,
+              select: ru.position
+          )
+
+        room_users when is_list(room_users) ->
+          Enum.map(room_users, & &1.position)
+      end
+
     used_positions = Enum.sort(used_positions)
-    
+
     Enum.find(0..(room.max_players - 1), fn pos ->
       pos not in used_positions
     end)

@@ -4,7 +4,7 @@ defmodule GameEightWeb.PageController do
   def home(conn, _params) do
     render(conn, :home)
   end
-  
+
   def test(conn, _params) do
     # Simple drag and drop test page
     html(conn, """

@@ -25,12 +25,16 @@ defmodule GameEight.Game.PlayerGameState do
     belongs_to :user, User
 
     # Player position and status
-    field :player_index, :integer  # 0, 1, 2, etc. for turn order
-    field :player_status, :string, default: "player_off"  # player_off, player_on
+    # 0, 1, 2, etc. for turn order
+    field :player_index, :integer
+    # player_off, player_on
+    field :player_status, :string, default: "player_off"
 
     # Player cards and game data
-    field :hand_cards, :map, default: %{}  # %{"cards" => [Card maps]}
-    field :dice_roll, :integer  # Dice result for turn order determination
+    # %{"cards" => [Card maps]}
+    field :hand_cards, :map, default: %{}
+    # Dice result for turn order determination
+    field :dice_roll, :integer
 
     # Player statistics
     field :cards_played_total, :integer, default: 0
@@ -38,7 +42,8 @@ defmodule GameEight.Game.PlayerGameState do
     field :moves_made_this_turn, :integer, default: 0
 
     # Player actions and state
-    field :last_action, :string  # "play_cards", "draw_card", "pass_turn", etc.
+    # "play_cards", "draw_card", "pass_turn", etc.
+    field :last_action, :string
     field :last_action_at, :utc_datetime
     field :is_ready, :boolean, default: false
 
@@ -52,18 +57,34 @@ defmodule GameEight.Game.PlayerGameState do
   def changeset(player_game_state, attrs) do
     player_game_state
     |> cast(attrs, [
-      :game_state_id, :user_id, :player_index, :player_status,
-      :hand_cards, :dice_roll, :cards_played_total, :combinations_made,
-      :moves_made_this_turn, :last_action, :last_action_at, :is_ready
+      :game_state_id,
+      :user_id,
+      :player_index,
+      :player_status,
+      :hand_cards,
+      :dice_roll,
+      :cards_played_total,
+      :combinations_made,
+      :moves_made_this_turn,
+      :last_action,
+      :last_action_at,
+      :is_ready
     ])
     |> validate_required([:game_state_id, :user_id, :player_index])
     |> validate_inclusion(:player_status, @player_statuses)
     |> validate_inclusion(:last_action, @actions, allow_nil: true)
     |> validate_number(:player_index, greater_than_or_equal_to: 0)
-    |> validate_number(:dice_roll, greater_than_or_equal_to: 1, less_than_or_equal_to: 6, allow_nil: true)
+    |> validate_number(:dice_roll,
+      greater_than_or_equal_to: 1,
+      less_than_or_equal_to: 6,
+      allow_nil: true
+    )
     |> validate_number(:cards_played_total, greater_than_or_equal_to: 0)
     |> validate_number(:combinations_made, greater_than_or_equal_to: 0)
-    |> validate_number(:moves_made_this_turn, greater_than_or_equal_to: 0, less_than_or_equal_to: 5)
+    |> validate_number(:moves_made_this_turn,
+      greater_than_or_equal_to: 0,
+      less_than_or_equal_to: 5
+    )
     |> foreign_key_constraint(:game_state_id)
     |> foreign_key_constraint(:user_id)
     |> unique_constraint([:game_state_id, :user_id])
@@ -75,7 +96,10 @@ defmodule GameEight.Game.PlayerGameState do
     player_game_state
     |> cast(attrs, [:last_action, :last_action_at, :moves_made_this_turn, :cards_played_total])
     |> validate_inclusion(:last_action, @actions, allow_nil: true)
-    |> validate_number(:moves_made_this_turn, greater_than_or_equal_to: 0, less_than_or_equal_to: 5)
+    |> validate_number(:moves_made_this_turn,
+      greater_than_or_equal_to: 0,
+      less_than_or_equal_to: 5
+    )
     |> validate_number(:cards_played_total, greater_than_or_equal_to: 0)
     |> put_change(:last_action_at, DateTime.utc_now(:second))
   end
@@ -107,6 +131,7 @@ defmodule GameEight.Game.PlayerGameState do
   def hand_to_cards(%__MODULE__{hand_cards: %{"cards" => cards}}) when is_list(cards) do
     Enum.map(cards, &map_to_card/1)
   end
+
   def hand_to_cards(_), do: []
 
   @doc """
@@ -142,6 +167,7 @@ defmodule GameEight.Game.PlayerGameState do
   def has_won?(%__MODULE__{hand_cards: %{"cards" => cards}}) when is_list(cards) do
     length(cards) == 0
   end
+
   def has_won?(_), do: false
 
   @doc """
@@ -150,6 +176,7 @@ defmodule GameEight.Game.PlayerGameState do
   def hand_size(%__MODULE__{hand_cards: %{"cards" => cards}}) when is_list(cards) do
     length(cards)
   end
+
   def hand_size(_), do: 0
 
   @doc """
@@ -192,6 +219,7 @@ defmodule GameEight.Game.PlayerGameState do
     |> status_changeset(%{player_status: "player_on"})
     |> Repo.update()
   end
+
   def activate_player(%__MODULE__{} = player_state), do: {:ok, player_state}
 
   # Private helper functions
@@ -205,6 +233,7 @@ defmodule GameEight.Game.PlayerGameState do
         else
           add_error(changeset, :hand_cards, "contains invalid card data")
         end
+
       _ ->
         add_error(changeset, :hand_cards, "must be a map with 'cards' key containing an array")
     end
@@ -219,6 +248,7 @@ defmodule GameEight.Game.PlayerGameState do
 
     is_integer(position) and is_binary(card) and not is_nil(type) and not is_nil(deck)
   end
+
   defp valid_card_map?(_), do: false
 
   # Convert between Card structs and maps for JSON serialization
@@ -253,9 +283,11 @@ defmodule GameEight.Game.PlayerGameState do
       "hearts" -> :hearts
       "diamonds" -> :diamonds
       "clubs" -> :clubs
-      _ -> :spades # default fallback
+      # default fallback
+      _ -> :spades
     end
   end
+
   defp atomize_suit(suit) when is_atom(suit), do: suit
   defp atomize_suit(_), do: :spades
 
@@ -263,9 +295,11 @@ defmodule GameEight.Game.PlayerGameState do
     case deck do
       "red" -> :red
       "blue" -> :blue
-      _ -> :red # default fallback
+      # default fallback
+      _ -> :red
     end
   end
+
   defp atomize_deck(deck) when is_atom(deck), do: deck
   defp atomize_deck(_), do: :red
 end

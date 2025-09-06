@@ -31,10 +31,14 @@ defmodule GameEight.Game.GameState do
     field :cards_played_this_turn, :integer, default: 0
 
     # Game data (JSON fields)
-    field :deck, :map, default: %{}  # Array of Card structs serialized as maps
-    field :table_combinations, :map, default: %{}  # {trio_0: [...], escalera_0: [...]}
-    field :dice_results, :map, default: %{}  # {user_id => dice_value}
-    field :turn_order, {:array, :binary_id}, default: []  # [user_id1, user_id2, ...]
+    # Array of Card structs serialized as maps
+    field :deck, :map, default: %{}
+    # {trio_0: [...], escalera_0: [...]}
+    field :table_combinations, :map, default: %{}
+    # {user_id => dice_value}
+    field :dice_results, :map, default: %{}
+    # [user_id1, user_id2, ...]
+    field :turn_order, {:array, :binary_id}, default: []
 
     # Game settings
     field :max_players, :integer, default: 6
@@ -55,17 +59,32 @@ defmodule GameEight.Game.GameState do
   def changeset(game_state, attrs) do
     game_state
     |> cast(attrs, [
-      :room_id, :status, :current_player_index, :turn_number, :moves_left,
-      :cards_played_this_turn, :deck, :table_combinations, :dice_results,
-      :turn_order, :max_players, :cards_per_player, :timeout_seconds,
-      :started_at, :finished_at, :last_action_at
+      :room_id,
+      :status,
+      :current_player_index,
+      :turn_number,
+      :moves_left,
+      :cards_played_this_turn,
+      :deck,
+      :table_combinations,
+      :dice_results,
+      :turn_order,
+      :max_players,
+      :cards_per_player,
+      :timeout_seconds,
+      :started_at,
+      :finished_at,
+      :last_action_at
     ])
     |> validate_required([:room_id, :status])
     |> validate_inclusion(:status, @statuses)
     |> validate_number(:current_player_index, greater_than_or_equal_to: 0)
     |> validate_number(:turn_number, greater_than: 0)
     |> validate_number(:moves_left, greater_than_or_equal_to: 0, less_than_or_equal_to: 5)
-    |> validate_number(:cards_played_this_turn, greater_than_or_equal_to: 0, less_than_or_equal_to: 4)
+    |> validate_number(:cards_played_this_turn,
+      greater_than_or_equal_to: 0,
+      less_than_or_equal_to: 4
+    )
     |> validate_number(:max_players, greater_than: 1, less_than_or_equal_to: 6)
     |> validate_number(:cards_per_player, greater_than: 0)
     |> validate_number(:timeout_seconds, greater_than: 0)
@@ -86,13 +105,19 @@ defmodule GameEight.Game.GameState do
   def turn_changeset(game_state, attrs) do
     game_state
     |> cast(attrs, [
-      :current_player_index, :turn_number, :moves_left,
-      :cards_played_this_turn, :last_action_at
+      :current_player_index,
+      :turn_number,
+      :moves_left,
+      :cards_played_this_turn,
+      :last_action_at
     ])
     |> validate_number(:current_player_index, greater_than_or_equal_to: 0)
     |> validate_number(:turn_number, greater_than: 0)
     |> validate_number(:moves_left, greater_than_or_equal_to: 0, less_than_or_equal_to: 5)
-    |> validate_number(:cards_played_this_turn, greater_than_or_equal_to: 0, less_than_or_equal_to: 4)
+    |> validate_number(:cards_played_this_turn,
+      greater_than_or_equal_to: 0,
+      less_than_or_equal_to: 4
+    )
     |> put_change(:last_action_at, DateTime.utc_now(:second))
   end
 
@@ -116,6 +141,7 @@ defmodule GameEight.Game.GameState do
   def can_start?(%__MODULE__{status: "initializing", player_game_states: players}) do
     length(players) >= 2 && Enum.all?(players, & &1.is_ready)
   end
+
   def can_start?(_), do: false
 
   @doc """
@@ -134,6 +160,7 @@ defmodule GameEight.Game.GameState do
   def deck_to_cards(%__MODULE__{deck: %{"cards" => cards}}) when is_list(cards) do
     Enum.map(cards, &map_to_card/1)
   end
+
   def deck_to_cards(_), do: []
 
   @doc """
@@ -155,11 +182,12 @@ defmodule GameEight.Game.GameState do
       card_structs = Enum.map(cards, &map_to_card/1)
 
       # Apply automatic reordering for sequences when loading from database
-      reordered_cards = if String.starts_with?(key, "sequence") do
-        Card.reorder_sequence(card_structs)
-      else
-        card_structs
-      end
+      reordered_cards =
+        if String.starts_with?(key, "sequence") do
+          Card.reorder_sequence(card_structs)
+        else
+          card_structs
+        end
 
       {key, reordered_cards}
     end)
@@ -203,9 +231,11 @@ defmodule GameEight.Game.GameState do
       "hearts" -> :hearts
       "diamonds" -> :diamonds
       "clubs" -> :clubs
-      _ -> :spades # default fallback
+      # default fallback
+      _ -> :spades
     end
   end
+
   defp atomize_suit(suit) when is_atom(suit), do: suit
   defp atomize_suit(_), do: :spades
 
@@ -213,9 +243,11 @@ defmodule GameEight.Game.GameState do
     case deck do
       "red" -> :red
       "blue" -> :blue
-      _ -> :red # default fallback
+      # default fallback
+      _ -> :red
     end
   end
+
   defp atomize_deck(deck) when is_atom(deck), do: deck
   defp atomize_deck(_), do: :red
 end

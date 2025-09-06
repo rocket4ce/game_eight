@@ -7,22 +7,28 @@ defmodule GameEight.Repo.Migrations.CreateGameStates do
       add :room_id, references(:rooms, type: :binary_id, on_delete: :delete_all), null: false
 
       # Game flow control
-      add :status, :string, default: "initializing", null: false  # initializing, dice_rolling, playing, finished
+      # initializing, dice_rolling, playing, finished
+      add :status, :string, default: "initializing", null: false
       add :current_player_index, :integer, default: 0, null: false
       add :turn_number, :integer, default: 1, null: false
       add :moves_left, :integer, default: 5, null: false
       add :cards_played_this_turn, :integer, default: 0, null: false
 
       # Game data (JSON fields)
-      add :deck, :map, default: %{}, null: false  # Array of remaining cards to draw
-      add :table_combinations, :map, default: %{}, null: false  # Object with trio_X, escalera_X keys
-      add :dice_results, :map, default: %{}, null: false  # {player_id => dice_value}
-      add :turn_order, {:array, :binary_id}, default: [], null: false  # Array of user_ids in turn order
+      # Array of remaining cards to draw
+      add :deck, :map, default: %{}, null: false
+      # Object with trio_X, escalera_X keys
+      add :table_combinations, :map, default: %{}, null: false
+      # {player_id => dice_value}
+      add :dice_results, :map, default: %{}, null: false
+      # Array of user_ids in turn order
+      add :turn_order, {:array, :binary_id}, default: [], null: false
 
       # Game settings
       add :max_players, :integer, default: 6, null: false
       add :cards_per_player, :integer, default: 8, null: false
-      add :timeout_seconds, :integer, default: 300, null: false  # 5 minutes per turn
+      # 5 minutes per turn
+      add :timeout_seconds, :integer, default: 300, null: false
 
       # Timestamps
       add :started_at, :utc_datetime
