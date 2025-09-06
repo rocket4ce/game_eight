@@ -6,7 +6,7 @@ defmodule GameEight.Game do
   import Ecto.Query, warn: false
   alias GameEight.Repo
 
-  alias GameEight.Game.{Room, RoomUser}
+  alias GameEight.Game.{Room, RoomUser, GameState}
   alias GameEight.Accounts.User
 
   @doc """
@@ -262,7 +262,20 @@ defmodule GameEight.Game do
         {:error, :insufficient_players}
 
       true ->
-        update_room_status(room, "started")
+        case update_room_status(room, "started") do
+          {:ok, started_room} ->
+            # Initialize the game state when room starts
+            case GameEight.Game.Engine.initialize_game(room.id) do
+              {:ok, _game_state} ->
+                {:ok, started_room}
+              {:error, reason} ->
+                # Rollback room status if game initialization fails
+                update_room_status(started_room, "pending")
+                {:error, reason}
+            end
+          error ->
+            error
+        end
     end
   end
 

@@ -21,8 +21,9 @@ defmodule GameEight.Game.Engine do
     with {:ok, room} <- Game.get_room_with_users(room_id),
          :ok <- validate_room_for_game(room),
          {:ok, game_state} <- create_game_state(room),
-         {:ok, _player_states} <- create_player_states(game_state, room.users) do
-      {:ok, game_state}
+         {:ok, _player_states} <- create_player_states(game_state, room.users),
+         {:ok, dice_game_state} <- start_dice_phase(game_state.id) do
+      {:ok, dice_game_state}
     end
   end
 

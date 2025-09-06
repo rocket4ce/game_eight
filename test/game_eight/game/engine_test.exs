@@ -24,15 +24,15 @@ defmodule GameEight.Game.EngineTest do
       {:ok, _} = Game.join_room(room, user1)
       {:ok, _} = Game.join_room(room, user2)
 
-      # Start room
+      # Start room (this now also initializes the game)
       room = Repo.preload(room, [:creator, :room_users])
       {:ok, room} = Game.start_room(room)
 
-      # Initialize game
-      {:ok, game_state} = Engine.initialize_game(room.id)
+      # Get the game state that was created by start_room
+      game_state = Game.get_game_state_by_room(room.id)
 
       assert game_state.room_id == room.id
-      assert game_state.status == "initializing"
+      assert game_state.status == "dice_rolling"
       assert game_state.max_players == 6
       assert game_state.cards_per_player == 8
 
@@ -96,10 +96,10 @@ defmodule GameEight.Game.EngineTest do
       room = Repo.preload(room, [:creator, :room_users])
       {:ok, room} = Game.start_room(room)
 
-      {:ok, game_state} = Engine.initialize_game(room.id)
+      # Get the game state that was created by start_room (should already be in dice_rolling)
+      game_state = Game.get_game_state_by_room(room.id)
 
-      {:ok, updated_game} = Engine.start_dice_phase(game_state.id)
-      assert updated_game.status == "dice_rolling"
+      assert game_state.status == "dice_rolling"
     end
   end
 end
